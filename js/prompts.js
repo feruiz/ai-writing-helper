@@ -9,6 +9,7 @@ import { LIMITS, MAX, MAX_SHIFT } from "./fields.js";
 import { effectiveAddress } from "./compose.js";
 import { buildGuide } from "./guide.js";
 import { MARKER, voiceBlock } from "./block.js";
+import { TICS } from "./tics.js";
 
 export const SITE_URL = "https://feruiz.github.io/ai-writing-helper/";
 export const LLMS_FILE = "llms.txt";
@@ -60,6 +61,8 @@ export function ruler({ examples = false } = {}) {
     add(`- "${s.id}", ${s.name} (${s.when}): ${shifts.length ? shifts.join(", ") : "no shift"}${one ? "; written to one person, so never \"you all\"" : ""}.`);
   }
   add("", `A writer can switch off the built-in situations they never write in, and add up to ${MAX.situations} of their own, each with a name, when it applies and a shift from -${MAX_SHIFT} to +${MAX_SHIFT} on any axis.`);
+  add("", "### AI tics", "", "Patterns that make a text read as machine-written. The site's checker flags them in drafts and its guide tells the model to avoid them, unless the voice uses one on purpose.", "");
+  for (const t of TICS) add(`- "${t.id}", ${t.label}: ${t.rule}${examples ? ` For example: "${t.example.en.replace(/\n/g, " ")}" / "${t.example.pt.replace(/\n/g, " ")}"` : ""}`);
   return lines.join("\n");
 }
 
@@ -67,7 +70,6 @@ export function ruler({ examples = false } = {}) {
 
 // The keys of the block, said once for the request and for llms.txt.
 export function blockFormat() {
-  const forbidden = INITIAL_STATE.forbidden;
   return [
     `One JSON code block: valid JSON, with double quotes, no comments and no trailing commas. Any key may be left out, and a field may be "" or [] when nothing supports it; an empty field is better than an invented one. Choices use the ids in quotes in the ruler.`,
     "",
@@ -83,7 +85,8 @@ export function blockFormat() {
     `- "never": up to ${MAX.never} things texts in this voice never do, each one completing "never …" ("uses an exclamation mark"), as a list of strings.`,
     `- "pairs": up to ${MAX.pairs} words this voice uses where others use another, each written as "word to use, not word to avoid" ("neighbors, not customers"), as a list of strings.`,
     `- "preferred": words and expressions this voice reaches for, as a list of strings.`,
-    `- "forbidden": words this voice never uses, as a list of strings. Keep the ones already there, common tics of AI-written text (${forbidden}), and add the writer's own.`,
+    `- "forbidden": words this voice never uses, as a list of strings: the writer's own. Common AI-writing words are checked apart, under AI tics.`,
+    `- "allowedTics": the ids of the AI tics this voice uses on purpose, as a list; the checker won't flag them. Usually empty. Add one only when the real texts clearly do it, for example "dashes" for a writer who uses them freely.`,
     `- "speaker", "address", "role": one id each, from the foundation.`,
     `- "axes": each of the seven axis ids with its level, from 1 to 5.`,
     `- "sentenceLength", "exclamation", "emoji": one id each, from the finish.`,
@@ -121,7 +124,7 @@ export function startPrompt(state, { lang = "en", fromHere = false } = {}) {
     `1. ${fromHere ? "Start from the starting point at the end: it's what I already set in the site. Confirm it with me instead of asking everything again, and change only what my texts or answers support. Then ask" : "Ask whose voice this is (mine, a project's or a brand's) and what I write with it. Then ask"} me for real texts written in this voice${fromHere && state.examples.length ? ", beyond the ones already there" : ""}: two to five, ideally of different kinds (a post, an email, a reply, a page of a site, an essay). They are the best evidence of a voice. If I have none, say the result will rest on my answers alone, and carry on.`,
     "2. Ask what the texts can't show, two or three questions at a time: what I write about and what for, who reads it, what I believe or stand for, what this voice would never do or say, the situations I write in. Skip what the texts already answer.",
     "3. Place the voice on the ruler. Describe what the texts do, not what would be ideal. When they disagree, go with what most of them do, and tell me.",
-    "4. Look for what makes this voice its own beyond the ruler: how the texts open and close, the words they reach for, words used where others use another (\"neighbors\", not \"customers\"), and what they consistently avoid that texts of this kind usually do. Report only what you can point to in the texts, each as something a draft can be checked against (\"opens with the news, no greeting\"), never as a quality (\"a warm opening\"). When the evidence is thin, leave it out: a habit the texts don't show is worse than none.",
+    "4. Look for what makes this voice its own beyond the ruler: how the texts open and close, the words they reach for, words used where others use another (\"neighbors\", not \"customers\"), and what they consistently avoid that texts of this kind usually do. Report only what you can point to in the texts, each as something a draft can be checked against (\"opens with the news, no greeting\"), never as a quality (\"a warm opening\"). When the evidence is thin, leave it out: a habit the texts don't show is worse than none. If the real texts use one of the AI tics in the ruler on purpose, tell me: it goes in \"allowedTics\".",
     "5. Show me the proposal in plain words: each level with a short excerpt as evidence, then the habits. Ask what I'd change. Offer to write a short text for a real occasion of mine in this voice, so I can hear it before I settle.",
     `6. When I confirm, give me the block described under "The block". Then tell me, in one line, to paste it into the site under ${WHERE_TO_PASTE}.`,
     "",

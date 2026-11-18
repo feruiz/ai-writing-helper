@@ -188,6 +188,24 @@ The voice stays and the tone shifts with the situation: a shift moves an axis up
 
 A writer can switch off the built-in situations they never write in, and add up to 6 of their own, each with a name, when it applies and a shift from -2 to +2 on any axis.
 
+### AI tics
+
+Patterns that make a text read as machine-written. The site's checker flags them in drafts and its guide tells the model to avoid them, unless the voice uses one on purpose.
+
+- "chatbot", Chatbot phrases: No chatbot phrases: no praise for the question, no offers of more help, no "I hope this helps". For example: "Great question! I hope this helps." / "Ótima pergunta! Espero ter ajudado."
+- "stock", Stock phrases: No stock openers, signposts or summary closers: start with the point and stop when it's made. For example: "In today's fast-paced world, let's dive in. In conclusion, …" / "No mundo atual, vale ressaltar que… Em suma, …"
+- "puffery", Puffery: No inflated significance: say what the thing does, not that it is a milestone, a testament or a pivotal role. For example: "This launch stands as a testament to our commitment and plays a pivotal role." / "Este lançamento representa um marco e desempenha um papel fundamental."
+- "buzzwords", Buzzwords: Few buzzwords: plain words over "leverage", "robust", "seamless", "ecosystem", "journey". For example: "Leverage our robust, seamless ecosystem to unlock your journey." / "Alavanque nosso ecossistema robusto para potencializar sua jornada."
+- "contrast", Contrast formulas: No contrast formulas: say what it is, without first saying what it is not ("not just X, but Y", "it's not X, it's Y"). For example: "It's not just a newsletter, it's a movement." / "Não é apenas uma newsletter, é um movimento."
+- "triplets", Lists of three: Lists of three only when there are three things: no reflexive "fast, simple and powerful" in sentence after sentence. For example: "It's fast, simple and powerful. It saves time, money and effort." / "É rápido, simples e poderoso. Economiza tempo, dinheiro e esforço."
+- "dashes", Dashes: Few dashes: a comma, a colon or a full stop usually does the job of "—". For example: "The issue — finally — is here — and it's good." / "A edição — enfim — chegou — e ficou boa."
+- "reveals", Staged reveals: No staged reveals: no "The result? …" and no "Here's the thing:"; just say it. For example: "The result? Five minutes a week. Here's the thing: it works." / "O resultado? Cinco minutos por semana. A grande sacada é: funciona."
+- "participle", Tacked-on analysis: No tacked-on analysis: no sentence that ends in ", highlighting…" or ", reinforcing…". For example: "Issues now arrive on Fridays, highlighting our commitment to readers." / "As edições agora chegam às sextas, reforçando nosso compromisso com os leitores."
+- "transitions", Formal transitions: Few formal transitions: let sentences follow each other without "Moreover", "Furthermore", "Além disso" at every start. For example: "Moreover, it is short. Furthermore, it is free. Additionally, it has an archive." / "Além disso, é curta. Ademais, é gratuita. Dessa forma, todos ganham."
+- "openings", Repeated openings: Vary how sentences start: never three in a row with the same first word. For example: "We write it. We send it. We read every reply." / "Nós escrevemos. Nós enviamos. Nós respondemos."
+- "formatting", Heavy formatting: Formatting only when the text needs it: no headings, bold labels or emoji bullets in a short message. For example: "## Key Takeaways - **Speed:** fast - **Price:** free" / "## Principais Pontos - **Velocidade:** rápida - **Preço:** grátis"
+- "bureaucratese", Bureaucratese: No bureaucratese: no "please be advised", "venho por meio deste", "vou estar enviando". For example: "Please be advised that, pursuant to your request, …" / "Venho por meio deste informar que vou estar enviando…"
+
 ## The block
 
 One JSON code block: valid JSON, with double quotes, no comments and no trailing commas. Any key may be left out, and a field may be "" or [] when nothing supports it; an empty field is better than an invented one. Choices use the ids in quotes in the ruler.
@@ -204,7 +222,8 @@ One JSON code block: valid JSON, with double quotes, no comments and no trailing
 - "never": up to 6 things texts in this voice never do, each one completing "never …" ("uses an exclamation mark"), as a list of strings.
 - "pairs": up to 8 words this voice uses where others use another, each written as "word to use, not word to avoid" ("neighbors, not customers"), as a list of strings.
 - "preferred": words and expressions this voice reaches for, as a list of strings.
-- "forbidden": words this voice never uses, as a list of strings. Keep the ones already there, common tics of AI-written text (delve, tapestry, testament, pivotal, seamless, game-changer, solução, inovador, no mundo atual, vale ressaltar, mergulhar, jornada), and add the writer's own.
+- "forbidden": words this voice never uses, as a list of strings: the writer's own. Common AI-writing words are checked apart, under AI tics.
+- "allowedTics": the ids of the AI tics this voice uses on purpose, as a list; the checker won't flag them. Usually empty. Add one only when the real texts clearly do it, for example "dashes" for a writer who uses them freely.
 - "speaker", "address", "role": one id each, from the foundation.
 - "axes": each of the seven axis ids with its level, from 1 to 5.
 - "sentenceLength", "exclamation", "emoji": one id each, from the finish.

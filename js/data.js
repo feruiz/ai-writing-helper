@@ -231,8 +231,10 @@ export const INITIAL_STATE = {
   exclamation: "one",
   emoji: "never",
   preferred: "",
-  // starts with the most common tics of AI-written text, in English and Portuguese
-  forbidden: "delve, tapestry, testament, pivotal, seamless, game-changer, solução, inovador, no mundo atual, vale ressaltar, mergulhar, jornada",
+  // the writer's own words to avoid; common tics of AI-written text are checked apart (see tics.js)
+  forbidden: "",
+  // kinds of AI tic this voice uses on purpose, which the checker doesn't flag (ids from tics.js)
+  allowedTics: [],
   situation: "goodNews",
   applyShift: true,
   // the writer's approved texts (see examples.js); left out of the shareable link

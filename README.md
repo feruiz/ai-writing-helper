@@ -12,7 +12,7 @@ It started as Brand Voice Creator, out of research on brand tone of voice with A
 
 **Temperament.** Seven axes from 1 to 5: formal ↔ casual, serious ↔ playful, respectful ↔ irreverent, calm ↔ enthusiastic, direct ↔ lyrical, simple ↔ technical, cautious ↔ assertive. The first four come from the Nielsen Norman Group's tone dimensions.
 
-**Finish.** Sentence length, exclamation marks, emoji, preferred and forbidden words. The forbidden list starts with common tics of AI-written text in English and Portuguese. The sample text respects the sentence length limit by splitting long sentences at their natural joints.
+**Finish.** Sentence length, exclamation marks, emoji, preferred and forbidden words, and the AI tics the checker flags (below). The forbidden list is the voice's own; it starts empty. The sample text respects the sentence length limit by splitting long sentences at their natural joints.
 
 **About the writing.** What the sliders can't say, all optional: what it's about and what it's for (a personal site, a newsletter, a product), who reads it, what it believes (up to 4 short beliefs), how a text opens and closes, what it never does (up to 6) and the word pairs it uses ("readers, not users", up to 8). The guide puts what it's about, the reader and the beliefs in a section near the top, the opening, the closing and the "never" lines as concrete house rules, and the pairs in the vocabulary. Empty fields leave no trace in the guide. Each field has a length limit so the guide stays short and the link stays shareable.
 
@@ -32,8 +32,29 @@ It started as Brand Voice Creator, out of research on brand tone of voice with A
 | Certainty | Hedges ("should", "a ideia é") against boosters ("always", "nunca mais"); cautious voices need hedges, assertive voices allow none |
 | Informality | Contractions and colloquial words ("we're", "hey", "pra", "a gente"); none allowed in a formal voice |
 | Exclamation marks, emoji, forbidden words | Against the finish settings |
+| AI tics | Patterns that make a text read as machine-written (below) |
 
 Syllable counting and the word lists are approximations. Treat a failed check as a prompt to look, not as a verdict.
+
+**AI tics.** The meter, the exported checker and the guide also look for what makes a text read as machine-written, in English and Portuguese. Only patterns a script can find without many false alarms are checked:
+
+| Kind | Example | Flags on |
+|---|---|---|
+| Chatbot phrases | "Great question", "Espero ter ajudado" | One |
+| Stock phrases | "In today's fast-paced world", "Vale ressaltar", "Em suma" | One |
+| Puffery | "a testament to", "plays a pivotal role", "papel fundamental" | One |
+| Buzzwords | "leverage", "robust", "ecossistema", "alavancar" | 3 or more, and 1.5 per 100 words |
+| Contrast formulas | "It's not just X, it's Y", "Não é apenas X, é Y" | One |
+| Lists of three | "fast, simple and cheap", sentence after sentence | 2 or more, in at least 20% of the sentences |
+| Dashes | "—" piling up (no longer a strong sign: recent models avoid them) | 3 or more, and 1.5 per 100 words |
+| Staged reveals | "The result? …", "A grande sacada é:" | One |
+| Tacked-on analysis | ", highlighting…", ", reforçando…" | One |
+| Formal transitions | "Moreover", "Além disso" at the start of sentence after sentence | 3, or the same one twice |
+| Repeated openings | Three sentences in a row starting with the same word | One run |
+| Heavy formatting | Headings, bold labels or emoji bullets in a short message | Depends on the case |
+| Bureaucratese | "Please be advised", "venho por meio deste", "vou estar enviando" | One |
+
+The voice wins. Under Finish, each kind can be unticked when the voice uses it on purpose, and each box says when the approved texts do it ("in 2 of your approved texts"), which is the sign to untick it. The guide gets a short "Not like an AI" section with the kinds still on, plus what no script can check (rotating synonyms, sentences that would fit any subject, closing a paragraph by restating it), and says that an approved example that does one of these wins. The kinds the voice uses go in the chat's block as `allowedTics`. The built sample texts are tested to have none of these tics, at the ends of every pair of axes. Settings from before this check that kept the old default forbidden list, which was all AI tics, get the new empty list.
 
 **Warnings for odd combinations.** For example, formal and irreverent at once, or lyrical and technical together.
 
@@ -47,7 +68,7 @@ Syllable counting and the word lists are approximations. Treat a failed check as
 
 **Export.** Markdown guide, the checker and the skill package (below), settings as JSON, and a link with the voice encoded in the URL. The settings file carries everything. The link carries the voice, the fields about the writing and the situations (they are capped in length, so it stays shareable), but not the approved and rejected texts, since a few full texts would make it too long. Those stay in the browser, so opening a link keeps the ones you have. Settings files and links from before these fields existed still load, with those left empty, and so does everything saved when the site was Brand Voice Creator: the old names (`brand`, `business`, the "brand" speaker, the launch, outage and question situations) are read as the new ones, and what the browser kept moves over on the first visit.
 
-**The checker and the skill package.** "Download checker" gives `check-voice.mjs`, the meter as one standalone script with this voice's settings inside (the guide's language, the sentence limit, the exclamation and emoji limits, the forbidden words, and the expected levels of the base voice and of each situation in use). It needs only Node 18 or newer, no install. The model writes its draft to a file and runs `node check-voice.mjs draft.txt` (or pipes the text in); `--situation "Bad news"` (the situation's name or id) checks against that situation's shifted levels, and `--lang en|pt` overrides the language. It prints one line per check, `ok` or `FAIL` with a one-line fix, and exits 0 when everything passes, 1 when something needs fixing and 2 on wrong usage, so an agent can loop until it passes. The script is assembled in the browser from the source of `js/meter.js`, so it never drifts from the meter in the app. "Download skill (.zip)" packs a folder `voice-<name>/` with `SKILL.md` (name and description, then the guide, plus one extra line telling the model to run the checker on each draft and fix the failures before replying) and `check-voice.mjs`, for agents that support skills: unzip it into the agent's skills folder (for Claude Code, `~/.claude/skills/` or a project's `.claude/skills/`). The plain guide has no checker line. Both follow the language picked in the export dialog. The checks are the same word-list and formula checks as the meter, so they catch mechanical slips, not tone: a draft can pass and still sound off.
+**The checker and the skill package.** "Download checker" gives `check-voice.mjs`, the meter as one standalone script with this voice's settings inside (the guide's language, the sentence limit, the exclamation and emoji limits, the forbidden words, and the expected levels of the base voice and of each situation in use). It needs only Node 18 or newer, no install. The model writes its draft to a file and runs `node check-voice.mjs draft.txt` (or pipes the text in); `--situation "Bad news"` (the situation's name or id) checks against that situation's shifted levels, and `--lang en|pt` overrides the language. It prints one line per check, `ok` or `FAIL` with a one-line fix (for AI tics, one line per kind found, with the excerpt), and exits 0 when everything passes, 1 when something needs fixing and 2 on wrong usage, so an agent can loop until it passes. The script is assembled in the browser from the source of the meter's files (`js/text.js`, `js/tics.js`, `js/meter.js`), so it never drifts from the meter in the app. "Download skill (.zip)" packs a folder `voice-<name>/` with `SKILL.md` (name and description, then the guide, plus one extra line telling the model to run the checker on each draft and fix the failures before replying) and `check-voice.mjs`, for agents that support skills: unzip it into the agent's skills folder (for Claude Code, `~/.claude/skills/` or a project's `.claude/skills/`). The plain guide has no checker line. Both follow the language picked in the export dialog. The checks are the same word-list and formula checks as the meter, so they catch mechanical slips, not tone: a draft can pass and still sound off.
 
 **The guide is written for the model, not for a person.** It targets one language, chosen in the export dialog (it starts on the language most of the approved texts are in, else the one being previewed), and only carries that language's notes, illustrations and examples. The temperament comes in order of how much each axis defines the voice: an axis pushed to 1 or 5 gets its rule plus a "this, not this" pair taken from the neighbouring levels of its ladder (and a second "nor this" for the middle), an axis at 2 or 4 gets the rule and one pair, and axes left at 3 take one line each. Each situation is spelled out as the rules of the levels it lands on ("Energy drops to 1 of 5: Calm: no exclamation marks…") rather than as "energy −2". Readability is asked for in terms the model can follow while writing (word choice and average sentence length), not as a Flesch score; the meter still checks the score. The stock sentences about the fictional newsletter appear only as illustrations, framed as such.
 
@@ -77,7 +98,7 @@ python3 -m http.server 8000
 
 Then open `http://localhost:8000`. Opening `index.html` straight from disk doesn't work, because JavaScript modules need a server.
 
-`llms.txt` is generated from the same data as the sliders. After changing `js/data.js`, `js/fields.js` or `js/prompts.js`, regenerate it with `node scripts/build-llms.mjs`. `npm test` checks that it's up to date and runs the tests (Node 22 or newer, nothing to install): the block and the requests, the migration from the old names, and the sample texts, which must pass the meter for the initial voice and every ready-made character, and conjugate right for every speaker, reader and role.
+`llms.txt` is generated from the same data as the sliders. After changing `js/data.js`, `js/fields.js`, `js/tics.js` or `js/prompts.js`, regenerate it with `node scripts/build-llms.mjs`. `npm test` checks that it's up to date and runs the tests (Node 22 or newer, nothing to install): the block and the requests, the migration from the old names, and the sample texts, which must pass the meter for the initial voice and every ready-made character, and conjugate right for every speaker, reader and role.
 
 ## Layout
 
@@ -87,6 +108,8 @@ Then open `http://localhost:8000`. Opening `index.html` straight from disk doesn
 | `js/scenes-pt.js` | Portuguese sample sentences, conjugated by who speaks and who it talks to |
 | `js/scenes-en.js` | The same in English |
 | `js/compose.js` | Builds the sample text and applies the finish |
+| `js/text.js` | Plain text helpers shared by the meter and the AI tics: words, sentences, whole-word patterns |
+| `js/tics.js` | The AI tics: each kind's patterns, rule for the guide, example and fix |
 | `js/meter.js` | Verifiable rules and readability formulas |
 | `js/fields.js` | The fields about the writing (limits, lists, word pairs) and the cleanup of the writer's own situations |
 | `js/examples.js` | Approved and rejected examples: situation tags, language guess and cleanup |
@@ -100,7 +123,7 @@ Then open `http://localhost:8000`. Opening `index.html` straight from disk doesn
 | `js/app.js` | Interface |
 | `llms.txt` | The page for models: what the site is, the ruler with an example sentence per level, and the block's format. Generated, not edited by hand |
 | `scripts/build-llms.mjs` | Writes `llms.txt`; with `--check`, fails when it's out of date |
-| `tests/` | Tests of the block (with replies broken the way models break them), the requests, the migration and the sample texts |
+| `tests/` | Tests of the block (with replies broken the way models break them), the requests, the migration, the sample texts, the AI tics and the exported checker run end to end |
 
 ## Known limits
 
@@ -109,6 +132,10 @@ Then open `http://localhost:8000`. Opening `index.html` straight from disk doesn
 - The readability targets per technicality level are suggestions, not an industry standard.
 - Humor and irreverence have no reliable automatic check.
 - How well a chat follows the request varies by model and plan. The site checks the block it gets back and the meter checks the texts, but it can't check the conversation itself.
+
+## Credits
+
+The AI tic lists are our own, short, and informed by [blader/humanizer](https://github.com/blader/humanizer), [hardikpandya/stop-slop](https://github.com/hardikpandya/stop-slop), [petergyang/no-ai-slop](https://github.com/petergyang/no-ai-slop) and [tbhb/vale-ai-tells](https://github.com/tbhb/vale-ai-tells) (MIT), the "humanizar" skill in [fabricioctelles/skills](https://github.com/fabricioctelles/skills) (Apache-2.0) and Wikipedia's [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) (CC BY-SA 4.0). Nothing from them is copied whole.
 
 ## License
 

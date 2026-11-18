@@ -4,6 +4,7 @@
 import { FOUNDATION, AXES, FINISH, INITIAL_STATE, allSituations, activeSituations } from "./data.js";
 import { ABOUT_FIELDS, LIMITS, normalizeSituations, normalizeHidden } from "./fields.js";
 import { normalizeExamples, normalizeRejected } from "./examples.js";
+import { TIC_IDS } from "./tics.js";
 
 export const clone = (o) => JSON.parse(JSON.stringify(o));
 
@@ -45,8 +46,12 @@ export function migrate(raw) {
   for (const k of ["examples", "rejected"]) {
     if (Array.isArray(s[k])) s[k] = s[k].map((e) => (e && typeof e === "object" ? { ...e, situation: renamedSituation(e.situation) } : e));
   }
+  // The forbidden words used to start with AI tics, now checked apart: the
+  // untouched default becomes the new empty one.
+  if (s.forbidden === OLD_DEFAULT_FORBIDDEN) s.forbidden = "";
   return s;
 }
+const OLD_DEFAULT_FORBIDDEN = "delve, tapestry, testament, pivotal, seamless, game-changer, solução, inovador, no mundo atual, vale ressaltar, mergulhar, jornada";
 
 // ---------- Cleaning ----------
 
@@ -70,6 +75,7 @@ export function normalize(input) {
   if (!activeSituations(s).length) s.hiddenSituations = [];
   if (!activeSituations(s).some((x) => x.id === s.situation)) s.situation = activeSituations(s)[0].id;
   s.applyShift = s.applyShift !== false;
+  s.allowedTics = Array.isArray(s.allowedTics) ? TIC_IDS.filter((id) => s.allowedTics.includes(id)) : [];
   const known = allSituations(s);
   s.examples = normalizeExamples(s.examples, known);
   s.rejected = normalizeRejected(s.rejected, known);

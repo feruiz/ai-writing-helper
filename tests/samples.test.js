@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { INITIAL_STATE, PRESETS, SITUATIONS, FOUNDATION, AXES } from "../js/data.js";
 import { composeText, effectiveLevels, effectiveAddress } from "../js/compose.js";
 import { measure } from "../js/meter.js";
+import { findTics } from "../js/tics.js";
 import { normalize } from "../js/state.js";
 
 const failures = (state, checks) => {
@@ -40,6 +41,24 @@ test("every speaker, reader and role conjugates right at every level", () => {
       }
     }
   }
+});
+
+test("no sample text has an AI tic, at the ends of every axis pair", () => {
+  const ids = (group) => group.options.map((o) => o.id);
+  const found = new Set();
+  for (const [i, a] of AXES.entries()) {
+    for (const b of AXES.slice(i + 1)) {
+      for (const x of [1, 5]) for (const y of [1, 5]) {
+        for (const speaker of ids(FOUNDATION.speaker)) for (const address of ids(FOUNDATION.address)) for (const role of ids(FOUNDATION.role)) {
+          const state = normalize({ ...INITIAL_STATE, speaker, address, role, sentenceLength: "short", axes: { ...INITIAL_STATE.axes, [a.id]: x, [b.id]: y } });
+          for (const s of SITUATIONS) for (const lang of ["en", "pt"]) {
+            for (const t of findTics(composeText(state, s.id, lang), lang)) found.add(`${t.id}: ${t.found[0]} (${a.id}=${x}, ${b.id}=${y}, ${speaker}/${address}/${role}, ${s.id}/${lang})`);
+          }
+        }
+      }
+    }
+  }
+  assert.deepEqual([...found], []);
 });
 
 test("the samples talk about the fictional newsletter, not a brand's product", () => {

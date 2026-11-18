@@ -41,6 +41,12 @@ test("a link from before the rename opens too", () => {
   assert.equal(s.speaker, "byName");
 });
 
+test("the old default forbidden list, all AI tics, becomes the new empty one", () => {
+  const OLD = "delve, tapestry, testament, pivotal, seamless, game-changer, solução, inovador, no mundo atual, vale ressaltar, mergulhar, jornada";
+  assert.equal(normalize({ forbidden: OLD }).forbidden, "");
+  assert.equal(normalize({ forbidden: `${OLD}, barato` }).forbidden, `${OLD}, barato`, "a list the writer changed stays");
+});
+
 test("a new name wins over an old one when both are there", () => {
   assert.equal(migrate({ brand: "Old", name: "New" }).name, "New");
 });

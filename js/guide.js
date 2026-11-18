@@ -11,6 +11,7 @@ import { composeText, effectiveLevels, effectiveAddress } from "./compose.js";
 import { listOf } from "./meter.js";
 import { LANGUAGES, situationName } from "./examples.js";
 import { beliefsOf, neverOf, pairsOf } from "./fields.js";
+import { TICS } from "./tics.js";
 
 // How many rejected texts the guide carries: the latest ones, so they stay a footnote.
 export const MAX_REJECTED = 4;
@@ -198,6 +199,15 @@ export function buildGuide(state, lang = guideLanguage(state), { checker = "" } 
     }
     add("");
   }
+
+  // AI tics: the kinds the voice doesn't use on purpose, then what no script can
+  // check. The approved examples win: they are the voice, these are only defaults.
+  add("## Not like an AI", "");
+  add("These make a text read as machine-written. Where an approved example does one of them, follow the example.", "");
+  for (const t of TICS.filter((x) => !state.allowedTics?.includes(x.id))) add(`- ${t.rule}`);
+  add("- Name a thing once and keep that name; don't rotate synonyms for it.");
+  add("- Prefer concrete names, dates and numbers to sentences that would fit any subject.");
+  add("- Don't close a paragraph by restating it, and don't argue against an option nobody proposed.", "");
 
   // Situations: each shift spelled out as the rule of the level it lands on.
   add("## Tone by situation", "");

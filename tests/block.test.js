@@ -129,6 +129,15 @@ test("the Portuguese words the ruler quotes count as their ids", () => {
   assert.deepEqual(r.notes, []);
 });
 
+test("the AI tics a voice uses come by id or label, and the list of changes names them", () => {
+  const before = initial();
+  const r = readReply(fenced({ [MARKER]: 1, allowedTics: ["dashes", "Lists of three", "emojis"] }), before);
+  assert.deepEqual(r.state.allowedTics, ["triplets", "dashes"]);
+  assert.match(r.notes.join("\n"), /"emojis" isn't one of "chatbot"/);
+  const changes = Object.fromEntries(changesBetween(before, r.state).map((c) => [c.id, c.change]));
+  assert.equal(changes.allowedTics, "allowed Lists of three, Dashes");
+});
+
 test("axes may come at the top level", () => {
   const r = readReply(fenced({ [MARKER]: 1, formality: 5, certainty: 1 }), initial());
   assert.equal(r.state.axes.formality, 5);

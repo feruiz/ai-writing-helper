@@ -12,6 +12,7 @@ import { LIMITS, MAX, MAX_SHIFT, newSituationId, ignoredPairs } from "./fields.j
 import { situationName, situationTag, guessLang, oneLine } from "./examples.js";
 import { listOf } from "./meter.js";
 import { clone, normalize, migrate } from "./state.js";
+import { TICS } from "./tics.js";
 
 // The key that tells the site a JSON object is the block; the old one, from
 // when the site was Brand Voice Creator, still counts.
@@ -33,6 +34,7 @@ export const FIELD_LABELS = {
   pairs: "Say X, not Y",
   preferred: "Preferred words",
   forbidden: "Forbidden words",
+  allowedTics: "AI tics this voice uses",
 };
 // Longest text each one-line field takes; the other fields' limits come from fields.js.
 const TEXT_LIMITS = { name: 40, essence: 300, about: LIMITS.about, reader: LIMITS.reader, opening: LIMITS.opening, closing: LIMITS.closing };
@@ -41,7 +43,7 @@ const WORD_LISTS = ["preferred", "forbidden"]; // comma separated
 const CHOICES = { ...FOUNDATION, ...FINISH };
 // The site's own view settings: a settings file carries them, and they are skipped here.
 const VIEW_KEYS = ["situation", "applyShift"];
-const KNOWN = new Set([MARKER, OLD_MARKER, ...Object.keys(TEXT_LIMITS), "article", ...LINE_LISTS, ...WORD_LISTS, ...Object.keys(CHOICES), "axes", "customSituations", "hiddenSituations", "examples", "rejected", "reasons", ...VIEW_KEYS]);
+const KNOWN = new Set([MARKER, OLD_MARKER, ...Object.keys(TEXT_LIMITS), "article", ...LINE_LISTS, ...WORD_LISTS, ...Object.keys(CHOICES), "axes", "allowedTics", "customSituations", "hiddenSituations", "examples", "rejected", "reasons", ...VIEW_KEYS]);
 
 const isObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 const linesIn = (text) => String(text ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
@@ -84,6 +86,7 @@ export function voiceBlock(state) {
     sentenceLength: state.sentenceLength,
     exclamation: state.exclamation,
     emoji: state.emoji,
+    allowedTics: [...state.allowedTics],
     hiddenSituations: [...state.hiddenSituations],
     customSituations: state.customSituations.filter((s) => s.name.trim()).map(({ name, when, shift }) => ({ name, when, shift })),
     ...(examples.length && { examples }),
@@ -314,6 +317,21 @@ export function readBlock(input, current) {
     }
   }
 
+  // AI tics the voice uses on purpose, by id or by label
+  if ("allowedTics" in block) {
+    const list = block.allowedTics;
+    if (!Array.isArray(list)) note(`${FIELD_LABELS.allowedTics}: not a list, so it stays as it was.`);
+    else {
+      next.allowedTics = [];
+      for (const v of list) {
+        const k = flat(asText(v) ?? "").toLowerCase();
+        const t = TICS.find((x) => x.id.toLowerCase() === k || x.label.toLowerCase() === k);
+        if (t) next.allowedTics.push(t.id);
+        else note(`${FIELD_LABELS.allowedTics}: "${shown(v)}" isn't one of ${ids(TICS)}.`);
+      }
+    }
+  }
+
   // Situations: the writer's own replace the ones here (a situation with the
   // same name keeps its id, so the texts tagged with it stay tagged)
   if ("customSituations" in block) {
@@ -435,6 +453,11 @@ export function changesBetween(before, after) {
   for (const [key, group] of Object.entries(FINISH)) choice(key, group);
   list("preferred");
   list("forbidden");
+  const tic = (id) => TICS.find((t) => t.id === id).label;
+  const allowedNow = after.allowedTics.filter((id) => !before.allowedTics.includes(id)).map(tic);
+  const flaggedAgain = before.allowedTics.filter((id) => !after.allowedTics.includes(id)).map(tic);
+  const tics = [allowedNow.length && `allowed ${allowedNow.join(", ")}`, flaggedAgain.length && `flagged again ${flaggedAgain.join(", ")}`].filter(Boolean);
+  if (tics.length) add("allowedTics", "AI tics", tics.join("; "));
 
   const more = (key) => after[key].length - before[key].length;
   if (more("examples") > 0) add("examples", "Approved examples", `${plural(more("examples"), "text")} added`);
