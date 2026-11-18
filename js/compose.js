@@ -1,18 +1,21 @@
 // Builds the sample text for a situation from the user's choices, then applies
 // the finish: word swaps by formality, exclamation marks, emoji and capitals.
 
-import { SITUATIONS } from "./data.js";
+import { allSituations } from "./data.js";
 import { SCENES_PT, contextPt, greetingPt } from "./scenes-pt.js";
 import { SCENES_EN, contextEn, greetingEn, CONTRACTIONS } from "./scenes-en.js";
 
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
+// The brand's own situations have no stock sentences: their preview borrows the launch scene.
+const sceneKey = (id) => (SCENES_PT[id] ? id : "launch");
+
 // Adds the situation's shift to the base temperament, staying within 1 to 5.
 export function effectiveLevels(state, situationId) {
-  const situation = SITUATIONS.find((s) => s.id === situationId);
+  const situation = allSituations(state).find((s) => s.id === situationId);
   const levels = { ...state.axes };
   if (!state.applyShift) return levels;
-  for (const [axis, delta] of Object.entries(situation.shift)) {
+  for (const [axis, delta] of Object.entries(situation?.shift || {})) {
     levels[axis] = Math.min(5, Math.max(1, levels[axis] + delta));
   }
   return levels;
@@ -20,7 +23,7 @@ export function effectiveLevels(state, situationId) {
 
 // The address the text actually uses: a reply to one person never says "you all".
 export function effectiveAddress(state, situationId) {
-  return SCENES_PT[situationId].individual && state.address === "youPlural" ? "you" : state.address;
+  return SCENES_PT[sceneKey(situationId)].individual && state.address === "youPlural" ? "you" : state.address;
 }
 
 const wordCount = (s) => s.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
@@ -43,7 +46,7 @@ function splitLong(text, limit, en) {
 
 export function composeText(state, situationId, lang = "pt") {
   const en = lang === "en";
-  const scene = (en ? SCENES_EN : SCENES_PT)[situationId];
+  const scene = (en ? SCENES_EN : SCENES_PT)[sceneKey(situationId)];
   const n = effectiveLevels(state, situationId);
   const c = { ...(en ? contextEn : contextPt)(state, n, scene), role: state.role, grave: !!scene.grave };
   const blocks = scene.compose(c).filter((b) => b.length);
