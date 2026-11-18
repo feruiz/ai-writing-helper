@@ -7,7 +7,9 @@
 import { SITUATIONS } from "./data.js";
 
 export const LANGUAGES = { en: "English", pt: "Portuguese" };
-export const SOURCES = { pasted: "Pasted by you", diagnosed: "Pasted for the diagnosis", claude: "Written by Claude, approved by you" };
+export const SOURCES = { pasted: "Pasted by you", chat: "Brought from your AI chat", ai: "Written by your AI, approved by you", diagnosed: "Pasted for a diagnosis" };
+// Texts saved when the site called Claude itself are the same as texts from any AI.
+const sourceOf = (s) => (s === "claude" ? "ai" : Object.hasOwn(SOURCES, s) ? s : "pasted");
 
 export function situationName(tag, situations = SITUATIONS) {
   if (tag === "general") return "General";
@@ -41,7 +43,7 @@ export function normalizeExamples(list, situations) {
       text: e.text,
       situation: situationTag(e.situation, situations),
       lang: Object.hasOwn(LANGUAGES, e.lang) ? e.lang : guessLang(e.text),
-      source: Object.hasOwn(SOURCES, e.source) ? e.source : "pasted",
+      source: sourceOf(e.source),
       ...(oneLine(e.note) && { note: oneLine(e.note) }),
     }));
 }
@@ -50,7 +52,7 @@ export function normalizeExamples(list, situations) {
 export const oneLine = (v) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, 200) : "");
 
 // Cleans rejected texts the same way; the reason may be empty (the guide skips those).
-// They only come from Claude's texts, so the source is always "claude".
+// They only come from texts an AI wrote, so the source is always "ai".
 export function normalizeRejected(list, situations) {
   if (!Array.isArray(list)) return [];
   return list
@@ -60,6 +62,6 @@ export function normalizeRejected(list, situations) {
       reason: oneLine(e.reason),
       situation: situationTag(e.situation, situations),
       lang: Object.hasOwn(LANGUAGES, e.lang) ? e.lang : guessLang(e.text),
-      source: "claude",
+      source: "ai",
     }));
 }

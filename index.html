@@ -19,8 +19,7 @@
     </div>
     <div class="top-actions">
       <button type="button" class="button" id="randomize">Randomize voice</button>
-      <button type="button" class="button" id="open-diagnosis">Diagnose my texts</button>
-      <button type="button" class="button" id="open-test">Test the guide</button>
+      <button type="button" class="button" id="open-chat">Use your AI chat</button>
       <button type="button" class="button primary" id="open-export">Export guide</button>
     </div>
   </header>
@@ -132,19 +131,6 @@
         <p class="note">Texts you turned down, each with the reason. The guide shows the latest few under "Not like this" so the model avoids the pattern the reason names, not the subject. A text without a reason stays out of the guide.</p>
         <div class="examples" id="rejected"></div>
       </section>
-
-      <section class="panel">
-        <h2>With Claude <small>(optional)</small></h2>
-        <p class="note">To write with AI and diagnose texts. Your key goes straight from your browser to Anthropic and never passes through any other server. Prefer a test key with a spending limit.</p>
-        <label class="field">
-          <span>Anthropic API key</span>
-          <input type="password" id="api-key" autocomplete="off" placeholder="sk-ant-...">
-        </label>
-        <label class="check">
-          <input type="checkbox" id="remember-key">
-          <span>Remember the key in this browser</span>
-        </label>
-      </section>
     </aside>
 
     <section class="stage" aria-label="Text preview">
@@ -161,17 +147,24 @@
       <div class="page">
         <div class="text-source tabs small" role="tablist" aria-label="Text source" id="sources">
           <button type="button" role="tab" data-source="built">Built by the creator</button>
-          <button type="button" role="tab" data-source="claude">Written by Claude</button>
+          <button type="button" role="tab" data-source="ai">From your AI</button>
         </div>
         <div class="sample" id="sample" aria-live="polite"></div>
         <div class="sample-footer">
-          <span id="claude-status" class="note"></span>
+          <span id="ai-status" class="note" role="status"></span>
           <div class="footer-actions">
-            <button type="button" class="button" id="approve-claude" hidden>Approve as example</button>
-            <button type="button" class="button" id="reject-claude" hidden>Reject</button>
-            <button type="button" class="button" id="write-with-claude">Write with Claude</button>
+            <button type="button" class="button" id="approve-ai" hidden>Approve as example</button>
+            <button type="button" class="button" id="reject-ai" hidden>Reject</button>
+            <button type="button" class="button" id="paste-ai" hidden>Paste another text</button>
+            <button type="button" class="button" id="copy-request" title="The guide and a request for this situation's text, to paste in any AI chat">Copy the request for your AI</button>
           </div>
         </div>
+        <form class="paste-form" id="paste-form" hidden>
+          <label class="field"><span>The text your AI wrote</span>
+            <textarea id="paste-text" rows="6"></textarea>
+          </label>
+          <div class="reject-actions"><button type="submit" class="button small">Check this text</button><button type="button" class="button small" id="paste-cancel">Cancel</button></div>
+        </form>
         <form class="reject-form" id="reject-form" hidden>
           <label class="field"><span>Why not? A short reason, naming what is wrong with the way it's written</span>
             <input type="text" id="reject-reason" maxlength="200" autocomplete="off" placeholder="For example: opens with a greeting and a question">
@@ -226,70 +219,57 @@
     </div>
   </dialog>
 
-  <dialog id="diagnosis" class="dialog" aria-labelledby="diagnosis-title">
+  <dialog id="chat" class="dialog" aria-labelledby="chat-title">
     <form method="dialog" class="dialog-head">
-      <h2 id="diagnosis-title">Diagnose my texts</h2>
+      <h2 id="chat-title">Build the voice in your AI chat</h2>
       <button class="button">Close</button>
     </form>
-    <p class="note">Paste one to three real, approved texts from the brand, in English or Portuguese, ideally of different kinds (a post, an email, a reply). Claude places the sliders, and lists the habits it can point to in the texts (how they open and close, the words they reach for, what they never do), each with an excerpt as evidence; you tick the ones to add to the brand fields. Requires the API key.</p>
-    <div class="samples">
-      <div id="sample-box-1">
-        <textarea id="sample-1" rows="5" placeholder="Text 1" aria-label="Text 1"></textarea>
-        <div class="field situation-field inline" data-picker><span>Situation</span></div>
-      </div>
-      <div id="sample-box-2">
-        <textarea id="sample-2" rows="5" placeholder="Text 2" aria-label="Text 2"></textarea>
-        <div class="field situation-field inline" data-picker><span>Situation</span></div>
-      </div>
-      <div id="sample-box-3">
-        <textarea id="sample-3" rows="5" placeholder="Text 3" aria-label="Text 3"></textarea>
-        <div class="field situation-field inline" data-picker><span>Situation</span></div>
-      </div>
-    </div>
-    <label class="check">
-      <input type="checkbox" id="keep-samples" checked>
-      <span>Keep these texts as approved examples for the guide</span>
-    </label>
-    <div class="dialog-actions">
-      <button type="button" class="button primary" id="diagnose">Diagnose</button>
-      <span class="note" id="diagnosis-status" role="status"></span>
-    </div>
-    <div id="diagnosis-result"></div>
-  </dialog>
-
-  <dialog id="test" class="dialog" aria-labelledby="test-title">
-    <form method="dialog" class="dialog-head">
-      <h2 id="test-title">Test the guide</h2>
-      <button class="button">Close</button>
-    </form>
-    <p class="note">Write one to three short requests for texts the brand would really need, about its own business and unlike the approved examples. Claude writes each one with the guide as its only instructions. A second call then reads the texts blind, without the guide or your settings, and places the sliders. The closer that reading lands to your settings, the better the guide carries the voice. Requires the API key.</p>
-    <div class="guide-bar">
-      <span class="note">Write the texts in</span>
-      <div class="tabs small" role="tablist" id="test-languages" aria-label="Test language">
-        <button type="button" role="tab" data-test-lang="en">English</button>
-        <button type="button" role="tab" data-test-lang="pt">Português</button>
-      </div>
-    </div>
-    <div class="samples">
-      <div id="brief-box-1">
-        <textarea id="brief-1" rows="2" maxlength="400" placeholder="Request 1. For example: a post announcing something new the brand now offers" aria-label="Request 1"></textarea>
-        <div class="field situation-field inline" data-picker><span>Situation</span></div>
-      </div>
-      <div id="brief-box-2">
-        <textarea id="brief-2" rows="2" maxlength="400" placeholder="Request 2. For example: an email telling customers about a change they won't like" aria-label="Request 2"></textarea>
-        <div class="field situation-field inline" data-picker><span>Situation</span></div>
-      </div>
-      <div id="brief-box-3">
-        <textarea id="brief-3" rows="2" maxlength="400" placeholder="Request 3. For example: a reply to a customer whose order arrived late" aria-label="Request 3"></textarea>
-        <div class="field situation-field inline" data-picker><span>Situation</span></div>
-      </div>
-    </div>
-    <div class="dialog-actions">
-      <button type="button" class="button primary" id="run-test">Run the test</button>
-      <span class="note" id="test-cost"></span>
-    </div>
-    <p class="note" id="test-status" role="status"></p>
-    <div id="test-result"></div>
+    <p class="note">Works in any chat: Claude, ChatGPT, Gemini or another. This site never talks to the AI and needs no key: you copy a request, have the conversation there, and bring the result back here.</p>
+    <ol class="steps">
+      <li>
+        <h3>1. Start the conversation</h3>
+        <p class="note">Copy the request and paste it in a new conversation. The AI asks for real texts from the brand and a few questions, places the voice on the same ruler as the sliders, shows you the proposal, and ends with a block of settings.</p>
+        <div class="guide-bar">
+          <span class="note">Talk in</span>
+          <div class="tabs small" role="tablist" id="chat-languages" aria-label="Language of the conversation">
+            <button type="button" role="tab" data-chat-lang="en">English</button>
+            <button type="button" role="tab" data-chat-lang="pt">Português</button>
+          </div>
+        </div>
+        <label class="check" id="from-here-box">
+          <input type="checkbox" id="from-here">
+          <span id="from-here-label">Start from what's set here</span>
+        </label>
+        <div class="dialog-actions">
+          <button type="button" class="button primary" id="copy-start">Copy the request</button>
+          <span class="note" id="start-status" role="status"></span>
+        </div>
+        <details class="peek">
+          <summary>See the request</summary>
+          <textarea id="start-preview" readonly rows="10" aria-label="The request to paste in your AI chat"></textarea>
+        </details>
+      </li>
+      <li>
+        <h3>2. Bring the result back</h3>
+        <p class="note">Paste the AI's reply with the block of settings, or the whole conversation: the site finds the latest block in it. The voice changes here, and you can undo it.</p>
+        <label class="field"><span>The AI's reply</span>
+          <textarea id="reply" rows="6" placeholder='The reply that ends with the block: { "brandVoiceCreator": 1, … }'></textarea>
+        </label>
+        <div class="dialog-actions">
+          <button type="button" class="button primary" id="apply-reply">Apply to the voice</button>
+          <span class="note" id="reply-status" role="status"></span>
+        </div>
+        <div id="reply-result"></div>
+      </li>
+      <li>
+        <h3>3. Keep going</h3>
+        <p class="note">Changed the sliders or the fields here? Copy the voice as it is now and paste it in the same conversation, so the AI carries on from it. To hear the voice on one situation, use "Copy the request for your AI" under the text.</p>
+        <div class="dialog-actions">
+          <button type="button" class="button" id="copy-current">Copy the voice as it is now</button>
+          <span class="note" id="current-status" role="status"></span>
+        </div>
+      </li>
+    </ol>
   </dialog>
 
   <script type="module" src="js/app.js"></script>

@@ -1,0 +1,10 @@
+{
+  "name": "brand-voice-creator",
+  "private": true,
+  "type": "module",
+  "description": "No dependencies. The scripts only need Node.",
+  "scripts": {
+    "build": "node scripts/build-llms.mjs",
+    "test": "node scripts/build-llms.mjs --check && node --test \"tests/*.test.js\""
+  }
+}
