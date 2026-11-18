@@ -1,7 +1,7 @@
 // The voice checker: the meter, exported as one standalone Node script with this
 // voice's settings inside, for an AI to run on its own draft before it delivers.
-// The script is assembled in the browser from the source of meter.js, so the
-// checks in the file are the ones in the app, never a copy that drifts.
+// The script is assembled in the browser from the source of the meter's files,
+// so the checks in the file are the ones in the app, never a copy that drifts.
 // Also packs the checker and the guide as a skill folder (SKILL.md + script) in a .zip.
 
 import { activeSituations } from "./data.js";
@@ -14,18 +14,27 @@ const LANGUAGE_NAME = { en: "English", pt: "Portuguese" };
 
 export const slugOf = (name) => (name.trim() || "voice").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "voice";
 
-let meterSource;
-// meter.js as plain script text: no imports to resolve, so dropping "export" is all it takes.
-async function meterText() {
-  if (!meterSource) {
-    meterSource = fetch(new URL("./meter.js", import.meta.url)).then((r) => {
-      if (!r.ok) throw new Error("Couldn't load the meter.");
-      return r.text();
-    });
-  }
-  const text = await meterSource;
-  if (/^import\s/m.test(text)) throw new Error("meter.js must stay free of imports to be exported.");
-  return text.replace(/^export\s+/gm, "");
+// The files the checks live in, in the order the script needs them. Each may
+// import only from the ones before it, so the imports can simply be dropped.
+export const METER_FILES = ["text.js", "tics.js", "meter.js"];
+
+let sources;
+async function meterSources() {
+  sources ||= Promise.all(METER_FILES.map((file) => fetch(new URL(`./${file}`, import.meta.url)).then((r) => {
+    if (!r.ok) throw new Error("Couldn't load the meter.");
+    return r.text();
+  })));
+  return sources;
+}
+
+// The meter's files as one plain script: their imports of each other and their "export" dropped.
+export function meterCode(texts) {
+  return texts.map((text, i) => {
+    const local = new RegExp(`^import\\s[^;]*from\\s+["']\\./(?:${METER_FILES.slice(0, i).map((f) => f.replace(".", "\\.")).join("|") || "(?!)"})["'];?\\s*$`, "gm");
+    const code = text.replace(local, "");
+    if (/^import\s/m.test(code)) throw new Error(`${METER_FILES[i]} may only import from the meter's own files.`);
+    return code.replace(/^export\s+/gm, "").trim();
+  }).join("\n\n");
 }
 
 // What the script needs to know: the checks' settings, and the expected levels per situation.
@@ -47,6 +56,7 @@ export function checkerConfig(state, lang) {
       exclamation: state.exclamation,
       emoji: state.emoji,
       forbidden: state.forbidden,
+      allowedTics: state.allowedTics,
     },
     base: { levels: { ...state.axes }, address: state.address },
     situations,
@@ -66,6 +76,7 @@ const HINTS = {
   "Exclamation marks": "Cut the exclamation marks down to the limit.",
   "Emoji": "Cut the emoji down to the limit.",
   "Forbidden words": "Replace the words this voice never uses.",
+  "AI tics": "Rewrite the parts listed above.",
 };
 
 const USAGE = [
@@ -117,15 +128,18 @@ const rows = measure(text, { state: CONFIG.state, lang, levels: expected.levels,
 const bad = rows.filter((r) => !r.ok);
 console.log("Voice check: " + CONFIG.name + ", " + situationName + ", " + (lang === "en" ? "English" : "Portuguese"));
 for (const r of rows) {
-  console.log((r.ok ? "ok    " : "FAIL  ") + r.name + ": " + r.value + (r.ok ? "" : " (" + r.detail + ")"));
-  if (!r.ok) console.log("      Fix: " + (HINTS[r.name] || "Bring it within the rule."));
+  console.log((r.ok ? "ok    " : "FAIL  ") + r.name + ": " + r.value + (r.ok || r.tics ? "" : " (" + r.detail + ")"));
+  if (r.ok) continue;
+  // AI tics: one line per kind found, with what was found and the fix
+  if (r.tics) for (const t of r.tics) console.log("      " + t.label + ": " + t.found.slice(0, 3).map((f) => JSON.stringify(f)).join(", ") + ". Fix: " + t.fix);
+  else console.log("      Fix: " + (HINTS[r.name] || "Bring it within the rule."));
 }
 console.log(bad.length ? bad.length + " to fix. Fix them and run the check again." : "All checks pass.");
 process.exit(bad.length ? 1 : 0);
 `;
 
-// The whole script as text.
-export async function buildChecker(state, lang) {
+// The whole script as text, from the meter's code (see meterCode).
+export function checkerScript(state, lang, code) {
   const config = checkerConfig(state, lang);
   return [
     "#!/usr/bin/env node",
@@ -136,7 +150,7 @@ export async function buildChecker(state, lang) {
     'import { readFileSync } from "node:fs";',
     "",
     "// ---------- Meter ----------",
-    (await meterText()).trim(),
+    code,
     "",
     "// ---------- This voice ----------",
     "const CONFIG = " + JSON.stringify(config, null, 2) + ";",
@@ -145,6 +159,10 @@ export async function buildChecker(state, lang) {
     CLI.trim(),
     "",
   ].join("\n");
+}
+
+export async function buildChecker(state, lang) {
+  return checkerScript(state, lang, meterCode(await meterSources()));
 }
 
 // SKILL.md: frontmatter, then the guide with the line that tells the model to run the checker.

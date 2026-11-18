@@ -170,6 +170,14 @@ small { font-weight: 400; color: var(--muted); }
 .pills input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
 .choice-hint { font-size: 0.82rem; color: var(--muted); margin: 0.35rem 0 0; }
 
+/* AI tics the checker flags */
+.tics { margin-top: 0.9rem; font-size: 0.87rem; }
+.tics summary { cursor: pointer; font-weight: 600; }
+.tics .check { align-items: start; }
+.tics .check input { margin-top: 0.2rem; flex: none; }
+.tic-seen { color: var(--alert); }
+.tic-rule { display: block; color: var(--muted); font-weight: 400; }
+
 /* Axes */
 .axis { margin-top: 1rem; }
 .axis-ends { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.87rem; }

@@ -7,6 +7,7 @@ import { ABOUT_FIELDS, MAX, MAX_SHIFT, ignoredPairs, newSituationId } from "./fi
 import { buildChecker, buildSkillZip, slugOf, CHECKER_FILE } from "./checker.js";
 import { clone, encode, decode, normalize, linkState } from "./state.js";
 import { readReply, changesBetween } from "./block.js";
+import { TICS, TIC_IDS, findTics } from "./tics.js";
 import { startPrompt, continueMessage, writeRequest, hasStartingPoint } from "./prompts.js";
 
 const $ = (id) => document.getElementById(id);
@@ -78,6 +79,25 @@ function buildControls() {
     </div>`).join("");
 
   for (const [id, g] of Object.entries(FINISH)) $("finish").append(pillGroup(id, g.title, g.options, state[id], false));
+
+  $("tics").innerHTML = TICS.map((t) => `
+    <label class="check">
+      <input type="checkbox" data-tic="${t.id}">
+      <span><b>${escapeHtml(t.label)}</b> <small class="tic-seen" data-tic-seen="${t.id}"></small><small class="tic-rule">${escapeHtml(t.rule)}</small></span>
+    </label>`).join("");
+}
+
+// The AI tics' boxes follow the voice, and each says whether the approved texts
+// do it: a kind the writer's own texts use is a sign to untick it.
+function drawTics() {
+  const seen = Object.fromEntries(TIC_IDS.map((id) => [id, 0]));
+  for (const e of state.examples) if (e.text.trim()) for (const t of findTics(e.text, e.lang)) seen[t.id]++;
+  document.querySelectorAll("[data-tic]").forEach((box) => { box.checked = !state.allowedTics.includes(box.dataset.tic); });
+  document.querySelectorAll("[data-tic-seen]").forEach((el) => {
+    const n = seen[el.dataset.ticSeen];
+    el.textContent = n ? `in ${n} of your approved texts` : "";
+  });
+  $("tics-count").textContent = `(${TIC_IDS.length - state.allowedTics.length} of ${TIC_IDS.length})`;
 }
 
 function syncControls() {
@@ -394,6 +414,7 @@ function draw() {
     : "";
 
   $("warnings").innerHTML = warnings(state).map((w) => `<li>${escapeHtml(w)}</li>`).join("");
+  drawTics();
   drawRadar();
   drawLadder();
 }
@@ -470,6 +491,10 @@ function bindEvents() {
       state[el.name] = el.value;
     } else if (TEXT_FIELDS.includes(el.id)) {
       state[el.id] = el.value;
+    } else if (el.dataset.tic) {
+      const allowed = new Set(state.allowedTics);
+      el.checked ? allowed.delete(el.dataset.tic) : allowed.add(el.dataset.tic);
+      state.allowedTics = TIC_IDS.filter((id) => allowed.has(id));
     } else return;
     changed();
   });

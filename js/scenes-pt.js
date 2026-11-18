@@ -12,7 +12,6 @@ const VERBS = {
   voltar: ["voltei", "voltamos", "voltou"],
   desativar: ["desativei", "desativamos", "desativou"],
   reenviar: ["reenviei", "reenviamos", "reenviou"],
-  colocar: ["coloquei", "colocamos", "colocou"],
   eliminar: ["eliminei", "eliminamos", "eliminou"],
   deixar: ["deixei", "deixamos", "deixou"],
   sentir: ["senti", "sentimos", "sentiu"],
@@ -27,7 +26,6 @@ const VERBS = {
   ver: ["vejo", "vemos", "vê"],
   ficar: ["fico", "ficamos", "fica"],
   ir: ["vou", "vamos", "vai"],
-  poder: ["posso", "podemos", "pode"],
   mandar: ["mando", "mandamos", "manda"],
 };
 
@@ -144,7 +142,7 @@ export const SCENES_PT = {
       }[n.attitude] || [];
 
       const energy = n.energy === 5
-        ? [sentence(`${c.named ? `${c.ref} mal pode` : `Mal ${v("poder")}`} esperar para saber o que ${c.impersonal ? "os leitores vão achar" : `${A.pron} ${A.will} achar`}.`, true)]
+        ? [sentence(`A melhor parte vem agora: saber o que ${c.impersonal ? "os leitores vão" : `${A.pron} ${A.will}`} achar.`, true)]
         : [];
 
       const role = {
@@ -214,10 +212,10 @@ export const SCENES_PT = {
       ][n.attitude - 1];
 
       const certainty = [
-        `${subj}ainda ${v("estar")} investigando, mas a ideia é reduzir a chance de isso se repetir.`,
-        `${subj}${v("estar")} revisando a automação, o que deve evitar que isso se repita.`,
-        `${S}${v("colocar")} um teste antes de cada envio para pegar isso mais cedo.`,
-        `${S}${v("colocar")} uma revisão antes de cada envio para que isso não se repita.`,
+        "A causa ainda está em investigação, mas a ideia é reduzir a chance de isso se repetir.",
+        "A automação está em revisão, o que deve evitar que isso se repita.",
+        "Agora cada envio passa por um teste antes de sair.",
+        "Agora cada envio passa por uma revisão, para que isso não se repita.",
         `Isso não volta: ${S}${v("eliminar")} a causa na raiz.`,
       ][n.certainty - 1];
 
@@ -233,7 +231,7 @@ export const SCENES_PT = {
         peer: `${subj}${v("sentir")} isso também: ${c.speaker === "i" ? "a minha" : c.named ? "a própria" : "a nossa"} caixa de entrada recebeu as duas cópias.`,
         expert: "O relato completo do que aconteceu sai até segunda no site.",
         host: `Se algum link ainda não abrir, ${S}${v("resolver")} na hora; é só responder.`,
-        provocateur: "Newsletter que nunca erra não existe. Existe quem avisa rápido e conta tudo.",
+        provocateur: "Toda newsletter erra um dia; o que conta é avisar rápido e contar tudo.",
       }[c.role];
 
       const cta = c.impersonal
@@ -267,7 +265,7 @@ export const SCENES_PT = {
     compose(c) {
       const { n, v, S, A, imp, poss } = c;
       const energy = n.energy === 5
-        ? [sentence(c.speaker === "i" ? "Adorei a pergunta." : c.named ? "Ótima pergunta." : "Adoramos a pergunta.", true)]
+        ? [sentence("Essa é fácil.", true)]
         : [];
 
       const opening = [
@@ -292,12 +290,12 @@ export const SCENES_PT = {
         `O arquivo deve abrir direto; se não abrir, ${S}${v("conferir")}${A.with}.`,
         "O arquivo abre direto, sem cadastro.",
         "O arquivo abre direto, sem cadastro e sem senha.",
-        "Pronto: tudo abre na hora, sem cadastro, sem senha e sem espera.",
+        "Pronto: tudo abre na hora, sem cadastro nenhum.",
       ][n.certainty - 1];
 
       const humor = {
         4: [sentence("Nada de pedir edição antiga por e-mail.")],
-        5: [sentence("As edições antigas não foram para a gaveta: só estão esperando visita.")],
+        5: [sentence("Tem edição antiga com mais leitores hoje do que na semana em que saiu.")],
       }[n.humor] || [];
 
       const attitude = {
@@ -327,7 +325,7 @@ export const SCENES_PT = {
       }[c.role];
 
       const cta = c.register === "formal"
-        ? sentence(`${S}${v("ficar")} à disposição.`)
+        ? sentence(`Para qualquer outra coisa, ${S}${v("ficar")} à disposição.`)
         : c.register === "informal"
           ? sentence("Qualquer coisa, é só chamar.", true)
           : sentence("Se precisar de mais alguma coisa, é só responder.");

@@ -109,13 +109,13 @@ export const SCENES_EN = {
 
       const attitude = {
         1: [sentence(`${S}${v("appreciate")} ${c.impersonal ? "the" : "your"} interest.`)],
-        3: [sentence(`It turned out the way ${subj} wanted it: short.`)],
+        3: [sentence(`The format turned out the way ${subj} wanted it: short.`)],
         4: [sentence("A long newsletter nobody finishes is useless.")],
         5: [sentence("A newsletter that reads like a press release?"), sentence("Not here.")],
       }[n.attitude] || [];
 
       const energy = n.energy === 5
-        ? [sentence(`${subj} can hardly wait to hear what ${c.impersonal ? "readers think" : "you think"}.`, true)]
+        ? [sentence(`The best part comes next: hearing what ${c.impersonal ? "readers" : "you"} think.`, true)]
         : [];
 
       const role = {
@@ -183,10 +183,10 @@ export const SCENES_EN = {
       ][n.attitude - 1];
 
       const certainty = [
-        `${c.subjBe} still investigating, but the idea is to reduce the chance of this happening again.`,
-        `${c.subjBe} reviewing the automation, which should keep this from happening again.`,
-        `${S}added a test before every send to catch this earlier.`,
-        `${S}put a review in place before every send so this does not happen again.`,
+        "The investigation is still open, but the idea is to reduce the chance of this happening again.",
+        "The automation is under review, which should keep this from happening again.",
+        "A new test now runs before every send, to catch this earlier.",
+        "Every send now gets a review, so this does not happen again.",
         `This will not come back: ${S}removed the root cause.`,
       ][n.certainty - 1];
 
@@ -206,7 +206,7 @@ export const SCENES_EN = {
             : "We felt it too: our own inbox got both copies.",
         expert: "The full account of what happened will be on the site by Monday.",
         host: `If any link still does not open, ${S}will fix it right away; just reply.`,
-        provocateur: "A newsletter that never slips does not exist. What exists is someone who warns fast and tells everything.",
+        provocateur: "Every newsletter slips one day; what counts is warning fast and telling everything.",
       }[c.role];
 
       const cta = c.impersonal
@@ -238,7 +238,7 @@ export const SCENES_EN = {
     compose(c) {
       const { n, v, S, A } = c;
       const yes = c.impersonal ? "Yes, it is possible." : "Yes, you can.";
-      const energy = n.energy === 5 ? [sentence("Great question.", true)] : [];
+      const energy = n.energy === 5 ? [sentence("This one is easy.", true)] : [];
 
       const opening = [
         [sentence(yes, true)],
@@ -262,12 +262,12 @@ export const SCENES_EN = {
         `The archive should open right away; if it does not, ${S}will check it${A.with}.`,
         "The archive opens right away, no sign-up.",
         "The archive opens right away, no sign-up, no password.",
-        "Done: it all opens right away, no sign-up, no password, no waiting.",
+        "Done: it all opens right away, with no sign-up at all.",
       ][n.certainty - 1];
 
       const humor = {
         4: [sentence("No emailing anyone to ask for an old issue.")],
-        5: [sentence("The old issues are not in a drawer: they are just waiting for visitors.")],
+        5: [sentence("Some old issues get more readers now than the week they went out.")],
       }[n.humor] || [];
 
       const attitude = {
@@ -295,10 +295,10 @@ export const SCENES_EN = {
       }[c.role];
 
       const cta = c.register === "formal"
-        ? sentence(c.impersonal ? `${S}${v("remain")} available for anything else.` : `${S}${v("remain")} available if you need anything else.`)
+        ? sentence(`For anything else, ${S}${v("remain")} available.`)
         : c.register === "informal"
           ? sentence(`Anything else, just give ${c.obj} a shout.`, true)
-          : sentence(c.impersonal ? "For anything else, a reply to this message is enough." : "If you need anything else, just reply.");
+          : sentence(c.impersonal ? "For anything else, a reply to this message is enough." : "For anything else, just reply.");
 
       return [
         [...energy, ...opening, sentence(body)],

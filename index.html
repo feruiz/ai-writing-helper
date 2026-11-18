@@ -114,9 +114,14 @@
           <input type="text" id="preferred" autocomplete="off">
         </label>
         <label class="field">
-          <span>Forbidden words</span>
-          <input type="text" id="forbidden" autocomplete="off">
+          <span>Forbidden words <small>(this voice's own)</small></span>
+          <input type="text" id="forbidden" autocomplete="off" placeholder="cheap, customers, synergy">
         </label>
+        <details class="tics">
+          <summary>AI tics the checker flags <small id="tics-count"></small></summary>
+          <p class="note">Patterns that make a text read as machine-written. The checker and the guide flag the ticked ones. Untick a kind this voice uses on purpose: the voice wins.</p>
+          <div id="tics"></div>
+        </details>
       </section>
 
       <section class="panel">
