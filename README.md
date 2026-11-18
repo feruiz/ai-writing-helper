@@ -50,7 +50,9 @@ The key goes straight from the browser to Anthropic, with no server in between. 
 
 ## Running it
 
-Nothing to install. Serve the folder with any static server:
+Live at **https://feruiz.github.io/brand-voice-creator/**.
+
+To run it locally there's nothing to install. Serve the folder with any static server:
 
 ```sh
 python3 -m http.server 8000
