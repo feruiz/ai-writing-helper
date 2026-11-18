@@ -5,7 +5,6 @@
 
 import { AXES, SITUATIONS } from "./data.js";
 import { oneLine } from "./examples.js";
-import { listOf } from "./meter.js";
 
 // Longest text each field takes. Lists are one item per line.
 export const LIMITS = { business: 300, reader: 200, beliefs: 500, opening: 200, closing: 200, never: 600, pairs: 400 };
@@ -47,64 +46,3 @@ export function normalizeSituations(list) {
 }
 
 export const normalizeHidden = (list) => (Array.isArray(list) ? SITUATIONS.filter((s) => list.includes(s.id)).map((s) => s.id) : []);
-
-// ---------- Habits found by the diagnosis ----------
-
-// Each kind of habit the diagnosis extracts, with the brand field it feeds.
-// Signature moves have no field yet, so they are shown and not applied.
-export const HABIT_FIELDS = { openings: "opening", closings: "closing", words: "preferred", pairs: "pairs", never: "never", moves: null };
-export const HABIT_LABELS = { openings: "Opening", closings: "Closing", words: "Word", pairs: "Says", never: "Never", moves: "Move" };
-const MAX_HABITS = 6; // per kind
-
-// The diagnosis's habits as one flat list, cleaned: { kind, field, habit,
-// evidence, texts, say?, not? }. "texts" keeps the numbers of the texts
-// (1 to count) the habit was seen in, so the list can say which rest on one text.
-export function habitList(habits, count) {
-  if (!habits || typeof habits !== "object") return [];
-  const out = [];
-  for (const [kind, field] of Object.entries(HABIT_FIELDS)) {
-    const items = Array.isArray(habits[kind]) ? habits[kind] : [];
-    for (const raw of items.slice(0, MAX_HABITS)) {
-      if (!raw || typeof raw !== "object") continue;
-      const say = oneLine(raw.say).slice(0, 60);
-      const not = oneLine(raw.not).slice(0, 60);
-      // a "never" line is stored without the "never" the field's label already says
-      const habit = kind === "pairs" ? (say && not ? `${say}, not ${not}` : "") : kind === "never" ? neverOf(oneLine(raw.habit))[0] || "" : oneLine(raw.habit).slice(0, 120);
-      if (!habit) continue;
-      const texts = [...new Set((Array.isArray(raw.texts) ? raw.texts : []).map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= count))].sort((a, b) => a - b);
-      out.push({ kind, field, habit, evidence: oneLine(raw.evidence), texts, ...(kind === "pairs" && { say, not }) });
-    }
-  }
-  return out;
-}
-
-// The brand fields with the picked habits added, as new values for the fields
-// that change (the caller merges them into the state). Nothing is replaced:
-// a one-line field gets the habit after what is there, a list gets new lines,
-// and a habit already in the field is skipped. Each field keeps its limit.
-export function applyHabits(state, picked) {
-  const fields = {};
-  const current = (f) => (f in fields ? fields[f] : String(state[f] ?? ""));
-  const same = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
-  for (const h of picked) {
-    const f = h.field;
-    if (!f) continue;
-    const value = current(f);
-    let next;
-    if (f === "opening" || f === "closing") {
-      if (same(value, h.habit) || value.toLowerCase().includes(h.habit.toLowerCase())) continue;
-      next = value.trim() ? `${value.trim().replace(/[.;]\s*$/, "")}; ${h.habit}` : h.habit;
-    } else if (f === "never") {
-      if (neverOf(value).some((l) => same(l, h.habit))) continue;
-      next = value.trim() ? `${value.trimEnd()}\n${h.habit}` : h.habit;
-    } else if (f === "pairs") {
-      if (pairsOf(value).some((p) => same(p.say, h.say) && same(p.not, h.not))) continue;
-      next = value.trim() ? `${value.trimEnd()}\n${h.habit}` : h.habit;
-    } else if (f === "preferred") {
-      if (listOf(value).some((w) => same(w, h.habit))) continue;
-      next = value.trim() ? `${value.trim().replace(/,\s*$/, "")}, ${h.habit}` : h.habit;
-    } else continue;
-    fields[f] = f in LIMITS ? next.slice(0, LIMITS[f]) : next;
-  }
-  return fields;
-}

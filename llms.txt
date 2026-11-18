@@ -1,0 +1,222 @@
+# Brand Voice Creator
+
+> A free site that turns a brand's voice into a guide an AI can write with. This page is the reference for an AI helping someone build a voice in a chat: the ruler the site uses, with an example sentence for every level, and the block of settings the site reads back.
+
+Site: https://feruiz.github.io/brand-voice-creator/
+
+## How the site and a chat work together
+
+The site never calls an AI. The person copies a request from the site into any chat. In the conversation, the AI reads real texts from the brand, asks what the texts can't show, and places the voice on the ruler below. The conversation ends with the block, which the person pastes back into the site. There the voice shows up on sliders, with a sample text and checks of the verifiable rules, and the person fine-tunes it and exports the guide.
+
+A voice has a foundation (who speaks, who it talks to, the role), seven temperament axes, a finish (sentence length, exclamation marks, emoji), the brand's own fields (what it does, who reads it, what it believes, how a text opens and closes, what it never does, its word pairs and words), its situations and its approved texts.
+
+## The ruler
+
+### Foundation
+
+One option in each.
+
+speaker (who speaks):
+- "we": First person plural ("we launched", "our"; in Portuguese "lançamos", "nosso").
+- "i": First person singular: a real person signs ("I launched"; in Portuguese "lancei").
+- "brand": Third person: the brand refers to itself by name ("Lumen launched").
+
+address (who it talks to):
+- "you": Addresses the reader as "you" ("você" in Portuguese).
+- "youPlural": Talks to a group: "vocês" in Portuguese, a group greeting such as "Hi everyone" in English.
+- "formal": Ceremonious address: "o(a) senhor(a)" in Portuguese; in English, a formal register (no contractions, "Dear", "please").
+- "impersonal": Never addresses the reader; uses impersonal constructions ("the report is available").
+
+role:
+- "mentor": Teaches and anticipates the next question.
+- "peer": Talks as an equal, as someone who lives the same problem.
+- "expert": Shows command of the subject and backs claims with data.
+- "host": Welcomes the reader and solves things before being asked.
+- "provocateur": Questions the usual way of doing things.
+
+### Temperament
+
+Seven axes, each from 1 to 5. 3 is the middle; 1 and 5 are the poles.
+
+Every example sentence says the same thing, the launch of a monthly finance report from a fictional company, so the levels can be compared. They show the levels; they say nothing about any brand.
+
+formality (1 = Formal, 5 = Casual):
+1. Full standard grammar, no contractions or slang; ceremonious address.
+   - en: "We are pleased to inform you that the monthly report is now available."
+   - pt: "Informamos que o relatório mensal já está disponível para consulta."
+2. Correct and courteous; avoids slang and contractions.
+   - en: "The monthly report is now available and can be accessed with one click."
+   - pt: "O relatório mensal já está disponível e pode ser acessado com um clique."
+3. Workplace conversation: natural sentences, no slang.
+   - en: "The monthly report is live and opens in one click."
+   - pt: "O relatório mensal já está no ar e abre com um clique."
+4. Colloquial: contractions, direct questions, light informality.
+   - en: "The monthly report's here. Take a look, it opens in one click."
+   - pt: "O relatório mensal chegou. Dá uma olhada, abre com um clique."
+5. Very loose: light slang, interjections, the rhythm of a text between friends.
+   - en: "Monthly report's out. One click and done, no fuss."
+   - pt: "Saiu o relatório do mês. Um clique e pronto, sem enrolação."
+
+humor (1 = Serious, 5 = Playful):
+1. No jokes, irony or wordplay.
+   - en: "The monthly report is available."
+   - pt: "O relatório mensal está disponível."
+2. Lightness only in word choice, never a joke.
+   - en: "The monthly report is here to make closing the month easier."
+   - pt: "O relatório mensal chegou para facilitar o fechamento."
+3. At most one light touch per text; never on sensitive topics.
+   - en: "The monthly report is here, and the spreadsheet can rest."
+   - pt: "O relatório mensal chegou, e a planilha pode descansar."
+4. One quip per text, tied to the topic; never at the reader's expense.
+   - en: "The monthly report is here. No more hunting for lost receipts."
+   - pt: "O relatório mensal chegou. Sem caça ao recibo perdido."
+5. Humor is part of the brand: funny comparisons and self-deprecation.
+   - en: "You can retire the 14-tab spreadsheet. It did its best."
+   - pt: "Pode aposentar a planilha de 14 abas. Ela fez o que pôde."
+
+attitude (1 = Respectful, 5 = Irreverent):
+1. Deferential: thanks the reader, asks permission, never criticizes anything.
+   - en: "We appreciate your trust and are pleased to present the new monthly report."
+   - pt: "Agradecemos a confiança e apresentamos o novo relatório mensal."
+2. Courteous and neutral; doesn't comment on competitors or the old way.
+   - en: "The new monthly report is available."
+   - pt: "O novo relatório mensal está disponível."
+3. Gives an opinion when it helps, respectfully.
+   - en: "The monthly report turned out the way we thought it should: simple."
+   - pt: "O relatório mensal ficou do jeito que achamos que devia ser: simples."
+4. Takes a stand and questions the usual way of doing things.
+   - en: "A beautiful report nobody opens is useless. This one opens in one click."
+   - pt: "Relatório bonito que ninguém abre não serve. Este abre em um clique."
+5. Provokes on purpose: pokes at the market and its conventions.
+   - en: "A report that looks like a tax return? Not here."
+   - pt: "Relatório que parece declaração de imposto? Aqui não."
+
+energy (1 = Calm, 5 = Enthusiastic):
+1. Calm: no exclamation marks, no intensifiers ("very", "super").
+   - en: "The monthly report is available."
+   - pt: "O relatório mensal está disponível."
+2. Restrained: at most one positive adjective.
+   - en: "The new monthly report is available."
+   - pt: "O novo relatório mensal está disponível."
+3. Positive, without exaggeration.
+   - en: "The monthly report is here, and it turned out well."
+   - pt: "O relatório mensal chegou, e ficou bom."
+4. Upbeat: one exclamation mark allowed, verbs of motion.
+   - en: "The monthly report has landed!"
+   - pt: "Chegou o relatório mensal!"
+5. Very excited: exclamation marks and explicit enthusiasm.
+   - en: "The monthly report has landed! We can't wait for you to see it!"
+   - pt: "Chegou o relatório mensal! Mal podemos esperar para você ver!"
+
+style (1 = Direct, 5 = Lyrical):
+1. No metaphors. Verb first, one idea per sentence.
+   - en: "We launched the monthly report. It opens in one click."
+   - pt: "Lançamos o relatório mensal. Abre em um clique."
+2. Direct, with at most one sentence of context.
+   - en: "We launched the monthly report to make closing the month easier. It opens in one click."
+   - pt: "Lançamos o relatório mensal para facilitar o fechamento. Abre em um clique."
+3. A concrete image now and then, no ornament.
+   - en: "The monthly report is here, and closing the month fits on one screen."
+   - pt: "O relatório mensal chegou, e o fechamento do mês cabe em uma tela."
+4. Opens with an image, then explains.
+   - en: "Every month tells a story. Now it has a home: the monthly report."
+   - pt: "Todo mês conta uma história. Agora ela tem um lugar: o relatório mensal."
+5. Narrative: scene, rhythm and image before information.
+   - en: "Every month leaves traces: Monday's coffee, Friday's big sale. Now they fit on one page."
+   - pt: "Todo mês deixa rastros: o café de segunda, a venda grande de sexta. Agora eles cabem em uma página."
+
+technicality (1 = Simple, 5 = Technical):
+1. No technical terms; talks about the result for the person.
+   - en: "Shows where the month's money went."
+   - pt: "Mostra para onde foi o dinheiro do mês."
+2. The customer's everyday words, no jargon.
+   - en: "Shows the month's spending by category."
+   - pt: "Mostra os gastos do mês por categoria."
+3. Technical terms only when needed, explained in the same sentence.
+   - en: "Compares spending with last month, by category."
+   - pt: "Compara os gastos com o mês anterior, por categoria."
+4. Details that help decide: numbers, formats, limits.
+   - en: "Daily updates, 12-month comparison and CSV export."
+   - pt: "Atualização diária, comparação de 12 meses e exportação em CSV."
+5. Field jargon without explanation; the reader is an expert.
+   - en: "Daily consolidation, 12-month moving average and API access."
+   - pt: "Consolidação diária, média móvel de 12 meses e acesso via API."
+
+certainty (1 = Cautious, 5 = Assertive):
+1. Explicit hedges: "the idea is", "it may".
+   - en: "The idea is that the report helps you see the month."
+   - pt: "A ideia é que o relatório ajude a enxergar o mês."
+2. Asserts carefully: "should", "tends to".
+   - en: "The report should make closing the month clearer."
+   - pt: "O relatório deve deixar o fechamento mais claro."
+3. States what it knows, without promising.
+   - en: "The report helps you see the month."
+   - pt: "O relatório ajuda a enxergar o mês."
+4. Assertive: sentences without hedges.
+   - en: "You will see the month clearly."
+   - pt: "Você vai enxergar o mês com clareza."
+5. Categorical: promises and guarantees.
+   - en: "You will never close the month in the dark again."
+   - pt: "Você nunca mais vai fechar o mês no escuro."
+
+### Finish
+
+One option in each.
+
+sentenceLength (sentence length):
+- "short": Sentences of up to 12 words.
+- "medium": Sentences of up to 20 words.
+- "long": No length limit; vary the rhythm.
+
+exclamation (exclamation marks):
+- "never": Never uses exclamation marks.
+- "one": At most one exclamation mark per text.
+- "free": Exclamation marks allowed when the energy calls for them.
+
+emoji:
+- "never": Never uses emoji.
+- "one": At most one emoji, at the end of the text.
+- "free": Emoji allowed to reinforce the tone.
+
+### Situations
+
+The voice stays and the tone shifts with the situation: a shift moves an axis up or down from the base level, staying within 1 to 5. The built-in situations:
+
+- "launch", Launch (announcing something new): energy +1.
+- "outage", Service outage (something failed on the brand's side and the reader was affected): humor -2, energy -2, attitude -1, style -1.
+- "question", Customer question (a reply to one person who asked something): no shift; written to one person, so never "you all".
+
+A brand can switch off the built-in situations it never writes for, and add up to 6 of its own, each with a name, when it applies and a shift from -2 to +2 on any axis.
+
+## The block
+
+One JSON code block: valid JSON, with double quotes, no comments and no trailing commas. Any key may be left out, and a field may be "" or [] when nothing supports it; an empty field is better than an invented one. Choices use the ids in quotes in the ruler.
+
+- "brandVoiceCreator": 1. Always the first key: it is how the site finds the block.
+- "brand": the brand's name.
+- "article": the article Portuguese puts before the name: "a", "o" or "none".
+- "essence": the voice in one sentence.
+- "business": what the brand does, and for whom. Up to 300 characters.
+- "reader": who reads its texts. Up to 200 characters.
+- "beliefs": up to 4 short beliefs the voice comes from, as a list of strings.
+- "opening": how a text opens, as something a draft can be checked against ("with the news itself, no greeting"). Up to 200 characters.
+- "closing": how a text closes, the same way. Up to 200 characters.
+- "never": up to 6 things the brand's texts never do, each one completing "never …" ("uses an exclamation mark"), as a list of strings.
+- "pairs": up to 8 words the brand uses where others use another, each written as "word to use, not word to avoid" ("neighbors, not customers"), as a list of strings.
+- "preferred": words and expressions the brand reaches for, as a list of strings.
+- "forbidden": words the brand never uses, as a list of strings. Keep the ones already there, common tics of AI-written text (delve, tapestry, testament, pivotal, seamless, game-changer, solução, inovador, no mundo atual, vale ressaltar, mergulhar, jornada), and add the brand's own.
+- "speaker", "address", "role": one id each, from the foundation.
+- "axes": each of the seven axis ids with its level, from 1 to 5.
+- "sentenceLength", "exclamation", "emoji": one id each, from the finish.
+- "hiddenSituations": the ids of the built-in situations the brand never writes for, as a list.
+- "customSituations": the brand's own situations, up to 6, each an object with "name", "when" (when it applies) and "shift" (axis ids with a step from -2 to +2; leave out the axes that don't move).
+- "examples": the brand's real texts that came up in the conversation, each an object with "text", "situation" (the name of a situation, or "General") and "language" ("en" or "pt"). Only texts the brand published or approved; a text written in the conversation goes in only when the person approves it as the brand's.
+- "reasons": each axis id with one short sentence quoting the excerpt that placed it at that level.
+
+The brand's own fields (essence, business, reader, beliefs, opening, closing, never, pairs, preferred and the situations) are written in the language the brand writes in. The site merges the block into what it has: a key left out keeps its value there, and the examples are added to the ones already there.
+
+## What the site makes from it
+
+- A voice guide in Markdown, written for a model: the brand first, the traits that define the voice with a "this, not that" pair each, the verifiable rules, the tone by situation, and the approved texts as examples.
+- A checker script (Node 18 or newer, no dependencies) that runs the same verifiable rules on a draft.
+- A skill package with the guide and the checker, for agents that support skills.

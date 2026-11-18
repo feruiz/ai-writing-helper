@@ -2,16 +2,19 @@ import { FOUNDATION, AXES, FINISH, SITUATIONS, PRESETS, INITIAL_STATE, allSituat
 import { composeText, effectiveLevels, effectiveAddress } from "./compose.js";
 import { measure, findForbidden } from "./meter.js";
 import { buildGuide, guideLanguage, warnings, defaultEssence } from "./guide.js";
-import { write, writeBrief, diagnose, errorMessage } from "./claude.js";
-import { LANGUAGES, SOURCES, situationName, situationTag, guessLang, normalizeExamples, normalizeRejected, oneLine } from "./examples.js";
-import { BRAND_FIELDS, LIMITS, MAX, MAX_SHIFT, HABIT_LABELS, ignoredPairs, newSituationId, normalizeSituations, normalizeHidden, habitList, applyHabits } from "./brand.js";
+import { LANGUAGES, SOURCES, situationName, situationTag, guessLang, oneLine } from "./examples.js";
+import { BRAND_FIELDS, MAX, MAX_SHIFT, ignoredPairs, newSituationId } from "./brand.js";
 import { buildChecker, buildSkillZip, slugOf, CHECKER_FILE } from "./checker.js";
-import { MAX_BRIEFS, testCalls, compareReading, meterFailures } from "./guide-test.js";
+import { clone, encode, decode, normalize, linkState } from "./state.js";
+import { readReply, changesBetween } from "./block.js";
+import { startPrompt, continueMessage, writeRequest, hasStartingPoint } from "./prompts.js";
 
 const $ = (id) => document.getElementById(id);
 const STATE_KEY = "brand-voice-creator:state";
-const API_KEY = "brand-voice-creator:api-key";
 const LANG_KEY = "brand-voice-creator:lang";
+// Where the site used to keep an Anthropic API key, when it called Claude itself.
+// It no longer needs one, so a key left there is removed on load.
+const OLD_API_KEY = "brand-voice-creator:api-key";
 
 // Local storage can fail (private window, blocked storage); nothing here depends on it.
 const store = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} };
@@ -20,47 +23,10 @@ const load = (k) => { try { return localStorage.getItem(k); } catch { return nul
 // The fields typed straight into the state.
 const TEXT_FIELDS = ["brand", "article", "essence", "preferred", "forbidden", ...BRAND_FIELDS];
 
-const clone = (o) => JSON.parse(JSON.stringify(o));
 const escapeHtml = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 // ---------- State ----------
 
-function encode(state) {
-  const bytes = new TextEncoder().encode(JSON.stringify(state));
-  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-function decode(text) {
-  const b64 = text.replace(/-/g, "+").replace(/_/g, "/");
-  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-  return JSON.parse(new TextDecoder().decode(bytes));
-}
-function normalize(raw) {
-  const s = { ...clone(INITIAL_STATE), ...raw, axes: { ...INITIAL_STATE.axes, ...(raw?.axes || {}) } };
-  for (const axis of AXES) s.axes[axis.id] = Math.min(5, Math.max(1, Math.round(Number(s.axes[axis.id]) || 3)));
-  const valid = (group, v, fallback) => (group.options.some((o) => o.id === v) ? v : fallback);
-  s.speaker = valid(FOUNDATION.speaker, s.speaker, "we");
-  s.address = valid(FOUNDATION.address, s.address, "you");
-  s.role = valid(FOUNDATION.role, s.role, "mentor");
-  s.sentenceLength = valid(FINISH.sentenceLength, s.sentenceLength, "medium");
-  s.exclamation = valid(FINISH.exclamation, s.exclamation, "one");
-  s.emoji = valid(FINISH.emoji, s.emoji, "never");
-  if (!["a", "o", "none"].includes(s.article)) s.article = "a";
-  for (const k of ["brand", "essence", "preferred", "forbidden"]) if (typeof s[k] !== "string") s[k] = INITIAL_STATE[k];
-  // Files and links from before the brand fields existed leave them empty.
-  for (const k of BRAND_FIELDS) s[k] = typeof s[k] === "string" ? s[k].slice(0, LIMITS[k]) : "";
-  s.customSituations = normalizeSituations(s.customSituations);
-  s.hiddenSituations = normalizeHidden(s.hiddenSituations);
-  if (!activeSituations(s).length) s.hiddenSituations = [];
-  if (!activeSituations(s).some((x) => x.id === s.situation)) s.situation = activeSituations(s)[0].id;
-  s.applyShift = s.applyShift !== false;
-  const known = allSituations(s);
-  s.examples = normalizeExamples(s.examples, known);
-  s.rejected = normalizeRejected(s.rejected, known);
-  return s;
-}
-// The link carries the voice, not the approved or rejected texts: a URL with a
-// few full texts in it gets too long to share. The settings file carries them.
-const linkState = ({ examples, rejected, ...rest }) => rest;
 function initialState() {
   let saved = null;
   const raw = load(STATE_KEY);
@@ -74,13 +40,15 @@ function initialState() {
 let state = initialState();
 let lang = load(LANG_KEY) === "pt" ? "pt" : "en";
 let guideLang = lang; // the language the exported guide tells the model to write in
-let source = "built";
+let source = "built"; // the preview's text: "built" from stock sentences, or "ai" when pasted from a chat
 let lastAxis = "style";
-let version = 0; // bumps on every choice; tells whether Claude's text is stale
-const claudeTexts = {}; // "situation:lang" -> { text, version }
-let rejecting = null; // the Claude text whose reason is being asked for, in the preview or the test dialog
-let testLang = null; // the language the guide test writes in; set when the dialog first opens
-let lastTest = null; // { version, state, lang, texts: [{ brief, situation, text }], reading, result }
+let version = 0; // bumps on every choice; tells whether a text from the AI is stale
+const aiTexts = {}; // "situation:lang" -> { text, version }: the texts pasted back from an AI chat
+const requestedAt = {}; // "situation:lang" -> the version when its request was copied
+let pasting = false; // the box for the AI's text is open over a text already there
+let rejecting = null; // the AI text whose reason is being asked for
+let chatLang = null; // the language of the conversation; set when the chat dialog first opens
+let lastReply = null; // { before, notes, reasons, changes, undone }: the last block applied, for its undo
 const previous = {}; // last text shown per source, situation and language, to highlight what changed
 
 // ---------- Building the controls ----------
@@ -109,10 +77,6 @@ function buildControls() {
     </div>`).join("");
 
   for (const [id, g] of Object.entries(FINISH)) $("finish").append(pillGroup(id, g.title, g.options, state[id], false));
-
-
-  const key = load(API_KEY);
-  if (key) { $("api-key").value = key; $("remember-key").checked = true; }
 }
 
 function syncControls() {
@@ -128,16 +92,11 @@ function syncControls() {
 
 // ---------- Situations ----------
 
-// The tabs, and the pickers in the dialogs, follow the situations in use.
+// The tabs follow the situations in use.
 function refreshSituations() {
   const active = activeSituations(state);
   if (!active.some((s) => s.id === state.situation)) state.situation = active[0].id;
   $("situations").innerHTML = active.map((s) => `<button type="button" role="tab" data-situation="${s.id}">${escapeHtml(s.name)}</button>`).join("");
-  document.querySelectorAll("dialog [data-picker]").forEach((box) => {
-    const tag = box.parentElement.querySelector('[data-field="situation"]') ? pickedSituation(box.parentElement) : "general";
-    box.querySelectorAll("select, input").forEach((el) => el.remove());
-    box.insertAdjacentHTML("beforeend", situationPicker(tag));
-  });
 }
 
 const SHIFTS = Array.from({ length: 2 * MAX_SHIFT + 1 }, (_, i) => i - MAX_SHIFT);
@@ -233,9 +192,9 @@ function renderRejected() {
             .map(([id, name]) => `<option value="${id}"${id === e.lang ? " selected" : ""}>${name}</option>`)
             .join("")}</select></label>
         </div>
-        <div class="example-foot"><span class="note">Written by Claude, rejected by you</span><button type="button" class="button small" data-remove>Remove</button></div>
+        <div class="example-foot"><span class="note">Written by your AI, rejected by you</span><button type="button" class="button small" data-remove>Remove</button></div>
       </div>`).join("")
-    : '<p class="note">None yet. Use "Reject" on a text Claude wrote, in the preview or in "Test the guide".</p>';
+    : '<p class="note">None yet. Use "Reject" on a text your AI wrote, under "From your AI" in the preview.</p>';
 }
 
 const sameText = (a) => (e) => e.text.trim() !== a.trim();
@@ -245,7 +204,7 @@ const isRejected = (text) => state.rejected.some((e) => !sameText(text)(e));
 function approveExample(text, situation, exampleLang, note = "") {
   if (isApproved(text)) return;
   state.rejected = state.rejected.filter(sameText(text));
-  state.examples.push({ text, situation, lang: exampleLang, source: "claude", ...(oneLine(note) && { note: oneLine(note) }) });
+  state.examples.push({ text, situation, lang: exampleLang, source: "ai", ...(oneLine(note) && { note: oneLine(note) }) });
   renderExamples();
   renderRejected();
   save(); // not changed(): the text on screen doesn't go stale by being approved
@@ -253,7 +212,7 @@ function approveExample(text, situation, exampleLang, note = "") {
 function rejectExample(text, reason, situation, exampleLang) {
   if (isRejected(text)) return;
   state.examples = state.examples.filter(sameText(text));
-  state.rejected.push({ text, reason: oneLine(reason), situation, lang: exampleLang, source: "claude" });
+  state.rejected.push({ text, reason: oneLine(reason), situation, lang: exampleLang, source: "ai" });
   rejecting = null;
   renderExamples();
   renderRejected();
@@ -347,7 +306,7 @@ function drawShift() {
   const shifts = Object.entries(situation.shift);
   const box = $("shift");
   // the brand's own situations have no stock case: the built text borrows a launch scene
-  const summary = situation.summary || `${situation.when || "Your own situation"}. The built text is a stock illustration at this tone, not about this situation; "Write with Claude" writes the real one`;
+  const summary = situation.summary || `${situation.when || "Your own situation"}. The built text is a stock illustration at this tone, not about this situation; your AI writes the real one ("Copy the request for your AI")`;
   if (!shifts.length) { box.innerHTML = `<span>${escapeHtml(summary)}. Base voice, no tone shift here.</span>`; return; }
   const levels = effectiveLevels({ ...state, applyShift: true }, situation.id);
   box.innerHTML = `<span>${escapeHtml(summary)}. Here the tone shifts:</span>${shifts
@@ -381,16 +340,16 @@ function draw() {
   drawShift();
 
   const textKey = `${state.situation}:${lang}`;
-  const fromClaude = claudeTexts[textKey];
+  const fromAi = aiTexts[textKey];
   let text;
-  if (source === "claude") {
-    text = fromClaude?.text || "";
-    $("claude-status").textContent = !fromClaude
-      ? "No text from Claude for this situation yet."
-      : fromClaude.version !== version ? "Written with earlier choices. Ask again to update it." : "Written by Claude from the exported guide. To see whether the guide holds on requests of your own, use \"Test the guide\".";
+  if (source === "ai") {
+    text = fromAi?.text || "";
+    $("ai-status").textContent = !fromAi
+      ? "Copy the request, paste it in any AI chat, then paste here the text it writes."
+      : fromAi.version !== version ? "Written with earlier choices. Copy the request again to update it." : "Written by your AI with the guide. The rules below check it.";
   } else {
     text = composeText(state, state.situation, lang);
-    $("claude-status").textContent = "";
+    $("ai-status").textContent = "";
   }
   const sample = $("sample");
   sample.lang = lang;
@@ -399,23 +358,27 @@ function draw() {
     sample.innerHTML = sampleHtml(text, newWords(previous[prevKey], text));
     previous[prevKey] = text;
   } else {
-    sample.innerHTML = '<p class="empty">Use "Write with Claude" to compare with the built text.</p>';
+    sample.innerHTML = '<p class="empty">No text from your AI for this situation in this language yet.</p>';
   }
 
-  const approve = $("approve-claude");
-  approve.hidden = source !== "claude" || !fromClaude;
-  if (fromClaude) {
-    approve.disabled = isApproved(fromClaude.text);
+  const approve = $("approve-ai");
+  approve.hidden = source !== "ai" || !fromAi;
+  if (fromAi) {
+    approve.disabled = isApproved(fromAi.text);
     approve.textContent = approve.disabled ? "In your examples" : "Approve as example";
   }
-  const reject = $("reject-claude");
+  const reject = $("reject-ai");
   reject.hidden = approve.hidden;
   const form = $("reject-form");
-  form.hidden = !fromClaude || approve.hidden || rejecting !== fromClaude.text;
-  if (fromClaude) {
-    reject.disabled = isRejected(fromClaude.text);
+  form.hidden = !fromAi || approve.hidden || rejecting !== fromAi.text;
+  if (fromAi) {
+    reject.disabled = isRejected(fromAi.text);
     reject.textContent = reject.disabled ? "Rejected" : "Reject";
   }
+  // the box for the AI's text: open while there's none, or when asked for another
+  $("paste-form").hidden = source !== "ai" || (!!fromAi && !pasting);
+  $("paste-cancel").hidden = !fromAi;
+  $("paste-ai").hidden = approve.hidden || pasting;
   const approvedCount = state.examples.filter((e) => e.text.trim()).length;
   $("examples-count").textContent = approvedCount ? `(${approvedCount})` : "";
   $("rejected-count").textContent = state.rejected.length ? `(${state.rejected.length})` : "";
@@ -434,122 +397,53 @@ function draw() {
   drawLadder();
 }
 
-// ---------- Guide test ----------
+// ---------- Your AI chat ----------
 
-const briefsOf = () => Array.from({ length: MAX_BRIEFS }, (_, i) => i + 1)
-  .map((i) => ({ brief: $(`brief-${i}`).value.trim(), situation: pickedSituation($(`brief-box-${i}`)) }))
-  .filter((b) => b.brief);
-
-// What the request tells the model about the situation: a built-in one with
-// what it covers, so the guide's tone shift applies; a label of the user's own as is.
-function briefSituation(tag) {
-  const s = allSituations(state).find((x) => x.id === tag);
-  return s ? `${s.name}${s.when ? ` (${s.when})` : ""}` : tag === "general" ? "" : tag;
+// The request for a new conversation follows the language picked and whether
+// it starts from what's set here (offered only when something is).
+function drawChat() {
+  document.querySelectorAll("[data-chat-lang]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.chatLang === chatLang)));
+  const any = hasStartingPoint(state);
+  const box = $("from-here");
+  $("from-here-box").hidden = !any;
+  if (!any) box.checked = false;
+  const texts = state.examples.filter((e) => e.text.trim()).length;
+  $("from-here-label").textContent = `Start from what's set here: the voice${texts ? ` and ${texts} approved text${texts === 1 ? "" : "s"}` : ""}. Untick to start from scratch.`;
+  $("start-preview").value = startPrompt(state, { lang: chatLang, fromHere: box.checked });
 }
 
-function drawTestBar() {
-  document.querySelectorAll("[data-test-lang]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.testLang === testLang)));
-  const n = briefsOf().length;
-  $("test-cost").textContent = n
-    ? `${testCalls(n)} calls to Claude: ${n === 1 ? "one text" : `${n} texts`}, then one blind reading of ${n === 1 ? "it" : "them together"}.`
-    : "Nothing is sent until you run it.";
-  $("run-test").textContent = n ? `Run the test (${testCalls(n)} calls)` : "Run the test";
+// What the last block changed, with the AI's evidence where it gave any, and what it left out.
+function drawReply() {
+  const r = lastReply;
+  if (!r) { $("reply-result").innerHTML = ""; return; }
+  $("reply-result").innerHTML = `
+    ${r.changes.length ? `<ul class="changes">${r.changes.map((c) => `
+      <li><b>${escapeHtml(c.label)}:</b> ${escapeHtml(c.change)}${r.reasons[c.id] ? ` <span class="detail">${escapeHtml(r.reasons[c.id])}</span>` : ""}</li>`).join("")}
+    </ul>` : ""}
+    ${r.notes.length ? `<p class="notes-title">Left out or adjusted:</p><ul class="notes">${r.notes.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>` : ""}
+    ${r.changes.length ? `<button type="button" class="button small" id="undo-reply"${r.undone ? " disabled" : ""}>${r.undone ? "Undone" : "Undo"}</button>` : ""}`;
 }
 
-const SIGN = { exact: ["✓", "same level"], close: ["≈", "one level off"], missed: ["!", "two or more levels off"] };
-
-function scoreHtml(test) {
-  const r = test.result;
-  const level = (a) => (a.lo === a.hi ? String(a.lo) : `${a.lo}–${a.hi}`);
-  const moved = (a) => a.lo !== a.base || a.hi !== a.base;
-  const missed = r.axes.filter((a) => a.verdict === "missed");
-  const words = test.texts.map((t) => t.text).join(" ").split(/\s+/).filter(Boolean).length;
-  return `
-    <p class="test-score"><b>The guide carried ${r.carried} of ${r.total} axes</b> <span>(${r.exact} on the same level, ${r.carried - r.exact} one level off)</span></p>
-    <p>${r.mismatches.length
-      ? `<b>Didn't match:</b> ${r.mismatches.map((m) => `${m.title.toLowerCase()} (set ${escapeHtml(m.set)}, read ${escapeHtml(m.read)})`).join("; ")}.`
-      : "Who speaks, who it talks to, the role and the finish all match."}</p>
-    ${missed.length ? `<p>Where an axis missed, the guide's rule for it isn't coming through. Look at the approved examples first: the model imitates them more than the rules, so an example that leans the other way pulls the text with it.</p>` : ""}
-    <div class="table-scroll">
-      <table class="test-table">
-        <thead><tr><th scope="col">Axis</th><th scope="col">Set</th><th scope="col">Read</th><th scope="col">Why the reader placed it there</th></tr></thead>
-        <tbody>${r.axes.map((a) => `
-          <tr class="${a.verdict}">
-            <th scope="row"><span class="sign" title="${SIGN[a.verdict][1]}">${SIGN[a.verdict][0]}</span> ${a.name}<span class="visually-hidden">, ${SIGN[a.verdict][1]}</span></th>
-            <td>${level(a)}${moved(a) ? ` <span class="detail">(base ${a.base}, moved by the situation)</span>` : ""}</td>
-            <td>${a.read ?? "–"}${a.toward ? ` <span class="detail">(more ${a.toward.toLowerCase()})</span>` : ""}</td>
-            <td>${escapeHtml(a.reason)}</td>
-          </tr>`).join("")}
-        </tbody>
-      </table>
-    </div>
-    ${test.reading.adjectives?.length ? `<p><b>Voice the reader found:</b> ${escapeHtml(test.reading.adjectives.join(", "))}.${test.reading.note ? ` ${escapeHtml(test.reading.note)}` : ""}</p>` : ""}
-    <p class="note">How it's scored: an axis counts as carried when the blind reading lands within one level of the setting (✓ same level, ≈ one level off, ! two or more). Who speaks, who it talks to and the role must match. The finish counts as kept when the texts stay within its limits: no exclamation mark at all under "one per text" is fine.${words < 150 ? ` The texts add up to ${words} words; a reading on fewer than 150 is rough, so take one level either way as noise.` : ""}</p>`;
+// The clipboard, with the old way as a fallback for browsers that block it.
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch {}
+  const area = Object.assign(document.createElement("textarea"), { value: text, readOnly: true });
+  area.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+  // inside an open dialog, since a modal one makes the rest of the page inert
+  (document.querySelector("dialog[open]") || document.body).append(area);
+  area.select();
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch {}
+  area.remove();
+  return ok;
 }
 
-function testTextsHtml(test) {
-  return test.texts.map((t, i) => {
-    const fails = meterFailures(test.state, t.situation, test.lang, t.text);
-    const approved = isApproved(t.text);
-    const rejected = isRejected(t.text);
-    return `
-      <article class="test-text">
-        <p class="test-brief"><b>Request ${i + 1}</b>${t.situation === "general" ? "" : ` · ${escapeHtml(situationName(t.situation, allSituations(state)))}`}: ${escapeHtml(t.brief)}</p>
-        <div class="test-sample" lang="${test.lang}">${sampleHtml(t.text, new Set())}</div>
-        ${fails.length
-          ? `<ul class="test-meter" aria-label="Verifiable rules this text breaks">${fails.map((m) => `
-            <li><span class="sign" aria-hidden="true">!</span><span><b>${m.name}:</b> ${escapeHtml(m.value)} <span class="detail">(${escapeHtml(m.detail)})</span></span></li>`).join("")}</ul>`
-          : '<p class="test-pass"><span class="sign" aria-hidden="true">✓</span> Passes every verifiable rule.</p>'}
-        <div class="reject-actions">
-          <button type="button" class="button small" data-approve-test="${i}"${approved ? " disabled" : ""}>${approved ? "In your examples" : "Approve as example"}</button>
-          <button type="button" class="button small" data-reject-test="${i}"${rejected ? " disabled" : ""}>${rejected ? "Rejected" : "Reject"}</button>
-        </div>
-        ${rejecting === t.text && !rejected ? `
-        <form class="reject-form" data-reject-form="${i}">
-          <label class="field"><span>Why not? A short reason, naming what is wrong with the way it's written</span>
-            <input type="text" data-field="reason" maxlength="200" autocomplete="off" placeholder="For example: opens with a greeting and a question">
-          </label>
-          <div class="reject-actions"><button type="submit" class="button small">Reject this text</button><button type="button" class="button small" data-reject-cancel>Cancel</button></div>
-        </form>` : ""}
-      </article>`;
-  }).join("");
-}
-
-function drawTest() {
-  const test = lastTest;
-  $("test-result").innerHTML = !test ? "" : `
-    ${test.result ? scoreHtml(test) : ""}
-    <h3 class="test-heading">Texts Claude wrote with the guide</h3>
-    ${testTextsHtml(test)}`;
-}
-
-// ---------- Diagnosis ----------
-
-// The habits the diagnosis found, each with its evidence and the texts it was
-// seen in. The ones that feed a brand field get a box, ticked when more than
-// one text shows the habit (or when there was only one text to read).
-function habitsHtml(habits, count, textLang) {
-  if (!habits.length) return '<p class="note">No habits specific enough to report: the texts don\'t share an opening, a closing, a word or a pattern the diagnosis could point to. More texts, of different kinds, help.</p>';
-  const numbers = (list) => (list.length > 1 ? `${list.slice(0, -1).join(", ")} and ${list.at(-1)}` : String(list[0]));
-  const seen = (h) => (!h.texts.length || count === 1 ? "" : h.texts.length === 1 ? `one text only, text ${h.texts[0]}` : `texts ${numbers(h.texts)}`);
-  const row = (h, i) => `
-    <li>
-      <label class="check">
-        ${h.field ? `<input type="checkbox" data-habit="${i}"${h.texts.length > 1 || count === 1 ? " checked" : ""}>` : ""}
-        <span><b>${HABIT_LABELS[h.kind]}:</b> ${escapeHtml(h.habit)}${h.evidence ? ` <q lang="${textLang}">${escapeHtml(h.evidence)}</q>` : ""}${seen(h) ? ` <small>(${seen(h)})</small>` : ""}</span>
-      </label>
-    </li>`;
-  const applicable = habits.map((h, i) => [h, i]).filter(([h]) => h.field);
-  const moves = habits.map((h, i) => [h, i]).filter(([h]) => !h.field);
-  return `
-    <h3 class="habits-title">Habits found in the texts</h3>
-    ${applicable.length ? `
-    <p>What makes this voice its own, beyond the sliders. Tick the ones to add to the brand fields (opening, closing, "we never", word pairs and preferred words); the ones seen in more than one text start ticked.</p>
-    <ul class="habits">${applicable.map(([h, i]) => row(h, i)).join("")}</ul>
-    <button type="button" class="button" id="apply-habits">Add the ticked habits to the brand fields</button>` : ""}
-    ${moves.length ? `
-    <p>${applicable.length ? "Also noticed, in" : "In"} punctuation, formatting and sentence shape. There's no field for these yet: put the ones that matter into the essence or "we never" by hand.</p>
-    <ul class="habits">${moves.map(([h, i]) => row(h, i)).join("")}</ul>` : ""}`;
+// The whole state changed at once (a block, a file, an undo): every control follows.
+function reload() {
+  syncControls();
+  renderExamples();
+  renderRejected();
+  changed();
 }
 
 function save() {
@@ -600,15 +494,15 @@ function bindEvents() {
 
   $("situations").addEventListener("click", (ev) => {
     const id = ev.target.closest("[data-situation]")?.dataset.situation;
-    if (id) { state.situation = id; changed(); }
+    if (id) { state.situation = id; pasting = false; changed(); }
   });
   $("languages").addEventListener("click", (ev) => {
     const id = ev.target.closest("[data-lang]")?.dataset.lang;
-    if (id) { lang = id; store(LANG_KEY, id); draw(); }
+    if (id) { lang = id; pasting = false; store(LANG_KEY, id); draw(); }
   });
   $("sources").addEventListener("click", (ev) => {
     const id = ev.target.closest("[data-source]")?.dataset.source;
-    if (id) { source = id; draw(); }
+    if (id) { source = id; pasting = false; draw(); }
   });
 
   // Situations: switch built-ins on and off, add and edit the brand's own
@@ -693,57 +587,63 @@ function bindEvents() {
   };
   bindList("examples", "examples", renderExamples);
   bindList("rejected", "rejected", renderRejected);
-  $("approve-claude").addEventListener("click", () => {
-    const fromClaude = claudeTexts[`${state.situation}:${lang}`];
-    if (fromClaude) approveExample(fromClaude.text, state.situation, lang);
+  // The preview's text from an AI chat: copy the request, paste the text back
+  const aiText = () => aiTexts[`${state.situation}:${lang}`];
+  $("copy-request").addEventListener("click", async () => {
+    const situation = allSituations(state).find((s) => s.id === state.situation);
+    const ok = await copyText(writeRequest(state, lang, situation));
+    requestedAt[`${situation.id}:${lang}`] = version;
+    source = "ai";
+    pasting = true;
+    draw();
+    $("ai-status").textContent = ok
+      ? "Request copied, with the guide in it. Paste it in any AI chat, then paste the text it writes below."
+      : "Couldn't copy the request: this browser blocked the clipboard.";
+    $("paste-text").focus();
   });
-  $("reject-claude").addEventListener("click", () => {
-    const fromClaude = claudeTexts[`${state.situation}:${lang}`];
-    if (!fromClaude) return;
-    rejecting = fromClaude.text;
+  $("paste-ai").addEventListener("click", () => {
+    pasting = true;
+    draw();
+    $("paste-text").focus();
+  });
+  $("paste-cancel").addEventListener("click", () => {
+    pasting = false;
+    $("paste-text").value = "";
+    draw();
+  });
+  $("paste-form").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const text = $("paste-text").value.trim();
+    if (!text) { $("paste-text").focus(); return; }
+    const key = `${state.situation}:${lang}`;
+    // stale when the voice changed after the request was copied
+    aiTexts[key] = { text, version: requestedAt[key] ?? version };
+    $("paste-text").value = "";
+    pasting = false;
+    rejecting = null;
+    draw();
+  });
+  $("approve-ai").addEventListener("click", () => {
+    const fromAi = aiText();
+    if (fromAi) approveExample(fromAi.text, state.situation, lang);
+  });
+  $("reject-ai").addEventListener("click", () => {
+    const fromAi = aiText();
+    if (!fromAi) return;
+    rejecting = fromAi.text;
     draw();
     $("reject-reason").focus();
   });
   $("reject-cancel").addEventListener("click", () => { rejecting = null; $("reject-reason").value = ""; draw(); });
   $("reject-form").addEventListener("submit", (ev) => {
     ev.preventDefault();
-    const fromClaude = claudeTexts[`${state.situation}:${lang}`];
+    const fromAi = aiText();
     const reason = $("reject-reason").value;
-    if (!fromClaude) return;
+    if (!fromAi) return;
     if (!oneLine(reason)) { $("reject-reason").focus(); return; }
-    rejectExample(fromClaude.text, reason, state.situation, lang);
+    rejectExample(fromAi.text, reason, state.situation, lang);
     $("reject-reason").value = "";
     draw();
-  });
-
-  // API key
-  const saveKey = () => store(API_KEY, $("remember-key").checked && $("api-key").value.trim() ? $("api-key").value.trim() : null);
-  $("api-key").addEventListener("change", saveKey);
-  $("remember-key").addEventListener("change", saveKey);
-  const apiKey = () => {
-    const k = $("api-key").value.trim();
-    if (!k) { $("api-key").focus(); throw new Error("Paste your Anthropic API key in the \"With Claude\" panel."); }
-    return k;
-  };
-
-  $("write-with-claude").addEventListener("click", async () => {
-    const button = $("write-with-claude");
-    const situation = allSituations(state).find((s) => s.id === state.situation);
-    const askedAt = version;
-    try {
-      const k = apiKey();
-      button.disabled = true;
-      source = "claude";
-      $("claude-status").textContent = "Writing…";
-      document.querySelectorAll("[data-source]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.source === "claude")));
-      const text = await write(k, buildGuide(state, lang), situation, !!state.business.trim());
-      claudeTexts[`${situation.id}:${lang}`] = { text, version: askedAt };
-      draw();
-    } catch (error) {
-      $("claude-status").textContent = errorMessage(error);
-    } finally {
-      button.disabled = false;
-    }
   });
 
   // Export
@@ -752,7 +652,7 @@ function bindEvents() {
     document.querySelectorAll("[data-guide-lang]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.guideLang === guideLang)));
     const own = state.examples.filter((e) => e.text.trim() && e.lang === guideLang).length;
     const other = state.examples.filter((e) => e.text.trim()).length - own;
-    $("export-note").textContent = "Paste this text as a system prompt (in Claude, under Projects or Styles). " + (own
+    $("export-note").textContent = "Paste this text as the instructions of a project or a custom assistant in your AI chat, or at the start of a conversation. " + (own
       ? `Its examples are your ${own} approved text${own === 1 ? "" : "s"} in this language${other ? `; the ${other} in the other language stay${other === 1 ? "s" : ""} out` : ""}. The link to this voice carries the settings but not the examples; download the settings to keep those.`
       : other
         ? `Its examples are your ${other} approved text${other === 1 ? "" : "s"}, which are in the other language; the guide asks the model to carry their voice over.`
@@ -770,10 +670,7 @@ function bindEvents() {
     if (id) { guideLang = id; showGuide(); }
   });
   const notify = (msg) => { $("export-status").textContent = msg; };
-  const copy = async (text, msg) => {
-    try { await navigator.clipboard.writeText(text); notify(msg); }
-    catch { notify("Couldn't copy automatically. Select the text and copy it by hand."); }
-  };
+  const copy = async (text, msg) => notify(await copyText(text) ? msg : "Couldn't copy automatically. Select the text and copy it by hand.");
   const download = (name, content, type) => {
     const url = URL.createObjectURL(new Blob([content], { type }));
     const a = Object.assign(document.createElement("a"), { href: url, download: name });
@@ -807,10 +704,7 @@ function bindEvents() {
         examples: Array.isArray(raw.examples) ? raw.examples : state.examples,
         rejected: Array.isArray(raw.rejected) ? raw.rejected : state.rejected,
       });
-      syncControls();
-      renderExamples();
-      renderRejected();
-      changed();
+      reload();
       guideLang = guideLanguage(state, lang);
       showGuide();
       notify("Settings loaded.");
@@ -820,168 +714,61 @@ function bindEvents() {
     ev.target.value = "";
   });
 
-  // Diagnosis
-  $("open-diagnosis").addEventListener("click", () => $("diagnosis").showModal());
-  $("diagnosis").addEventListener("input", (ev) => { if (ev.target.dataset.field === "situation") togglePicker(ev.target); });
-  $("diagnose").addEventListener("click", async () => {
-    const pasted = [1, 2, 3]
-      .map((i) => ({ text: $(`sample-${i}`).value.trim(), situation: pickedSituation($(`sample-box-${i}`)) }))
-      .filter((p) => p.text);
-    const texts = pasted.map((p) => p.text);
-    const status = $("diagnosis-status");
-    if (!texts.length) { status.textContent = "Paste at least one text."; return; }
-    const button = $("diagnose");
-    try {
-      const k = apiKey();
-      button.disabled = true;
-      status.textContent = texts.join(" ").split(/\s+/).length < 150
-        ? "Analyzing… With fewer than 150 words in total, the result tends to be rough."
-        : "Analyzing…";
-      const r = await diagnose(k, texts);
-      const before = clone(state);
-      state = normalize({ ...state, speaker: r.speaker, address: r.address, role: r.role, axes: r.axes, sentenceLength: r.sentenceLength, exclamation: r.exclamation, emoji: r.emoji });
-      // The texts themselves are the best examples the guide can have.
-      const kept = $("keep-samples").checked ? pasted.filter((p) => !isApproved(p.text)) : [];
-      for (const p of kept) state.examples.push({ ...p, lang: guessLang(p.text), source: "diagnosed" });
-      syncControls();
-      renderExamples();
-      changed();
-      // The habits are not applied on their own: the user ticks the ones to keep.
-      const habits = habitList(r.habits, texts.length);
-      status.textContent = (kept.length
-        ? `Sliders updated. ${kept.length} text${kept.length === 1 ? "" : "s"} added to the approved examples.`
-        : "Sliders updated.") + (habits.some((h) => h.field) ? " The habits found are listed below: tick the ones to keep." : "");
-      $("diagnosis-result").innerHTML = `
-        <p><b>Voice found:</b> ${escapeHtml(r.adjectives.join(", "))}.</p>
-        <ul>${AXES.map((a) => `<li><b>${a.name} ${r.axes[a.id]} of 5.</b> ${escapeHtml(r.reasons[a.id])}</li>`).join("")}</ul>
-        ${r.note ? `<p>${escapeHtml(r.note)}</p>` : ""}
-        ${habitsHtml(habits, texts.length, guessLang(texts.join(" ")))}
-        <button type="button" class="button" id="undo-diagnosis">Undo and go back</button>`;
-      // Applying the ticked habits adds to the brand fields; undoing puts those fields back.
-      let fieldsBefore = null;
-      const drawHabits = () => {
-        const button = $("apply-habits");
-        if (!button) return;
-        const applied = fieldsBefore !== null;
-        button.textContent = applied ? "Undo: take the habits out of the fields" : "Add the ticked habits to the brand fields";
-        $("diagnosis-result").querySelectorAll("[data-habit]").forEach((box) => { box.disabled = applied; });
-      };
-      $("apply-habits")?.addEventListener("click", () => {
-        if (fieldsBefore) {
-          Object.assign(state, fieldsBefore);
-          fieldsBefore = null;
-          status.textContent = "The brand fields are back as they were. The sliders keep the diagnosis.";
-        } else {
-          const picked = habits.filter((h, i) => $("diagnosis-result").querySelector(`[data-habit="${i}"]`)?.checked);
-          if (!picked.length) { status.textContent = "Tick at least one habit to add."; return; }
-          const changes = applyHabits(state, picked);
-          fieldsBefore = Object.fromEntries(Object.keys(changes).map((f) => [f, state[f]]));
-          Object.assign(state, changes);
-          const n = Object.keys(changes).length;
-          status.textContent = n
-            ? `${picked.length} habit${picked.length === 1 ? "" : "s"} added to ${n} brand field${n === 1 ? "" : "s"}. Edit the wording there if it needs it.`
-            : "Those habits were already in the brand fields.";
-        }
-        syncControls();
-        changed();
-        drawHabits();
-      });
-      $("undo-diagnosis").addEventListener("click", () => {
-        // the sliders and the brand fields go back; the texts stay as examples until removed by hand
-        state = { ...before, examples: state.examples, rejected: state.rejected };
-        fieldsBefore = null;
-        syncControls();
-        changed();
-        drawHabits();
-        status.textContent = kept.length
-          ? "Sliders back where they were. The texts stay in the approved examples; remove them there if you don't want them."
-          : "Back to where you were.";
-      });
-    } catch (error) {
-      status.textContent = errorMessage(error);
-    } finally {
-      button.disabled = false;
-    }
+  // Your AI chat: the request that starts a conversation, the block it gives
+  // back, and the voice as it stands for the same conversation
+  $("open-chat").addEventListener("click", () => {
+    chatLang ??= lang;
+    $("from-here").checked = hasStartingPoint(state);
+    $("start-status").textContent = "";
+    $("current-status").textContent = "";
+    drawChat();
+    $("chat").showModal();
   });
-
-  // Guide test
-  $("open-test").addEventListener("click", () => {
-    testLang ??= guideLanguage(state, lang);
-    drawTestBar();
-    const status = $("test-status");
-    if (lastTest && !$("run-test").disabled) {
-      status.textContent = lastTest.version !== version
-        ? "These results are from earlier settings. Run the test again to check the current guide."
-        : "";
-    }
-    $("test").showModal();
+  $("chat-languages").addEventListener("click", (ev) => {
+    const id = ev.target.closest("[data-chat-lang]")?.dataset.chatLang;
+    if (id) { chatLang = id; drawChat(); }
   });
-  $("test").addEventListener("input", (ev) => {
-    if (ev.target.dataset.field === "situation") togglePicker(ev.target);
-    drawTestBar();
+  $("from-here").addEventListener("change", drawChat);
+  $("copy-start").addEventListener("click", async () => {
+    const ok = await copyText($("start-preview").value);
+    $("start-status").textContent = ok
+      ? "Copied. Paste it in a new conversation in your AI chat."
+      : "Couldn't copy automatically. Open \"See the request\" below and copy it by hand.";
+    if (!ok) $("start-preview").closest("details").open = true;
   });
-  $("test-languages").addEventListener("click", (ev) => {
-    const id = ev.target.closest("[data-test-lang]")?.dataset.testLang;
-    if (id) { testLang = id; drawTestBar(); }
+  $("apply-reply").addEventListener("click", () => {
+    const status = $("reply-status");
+    const result = readReply($("reply").value, state);
+    if (result.error) { status.textContent = result.error; return; }
+    const before = clone(state);
+    state = result.state;
+    const changes = changesBetween(before, state);
+    lastReply = { before, notes: result.notes, reasons: result.reasons, changes, undone: false };
+    reload();
+    drawReply();
+    drawChat();
+    status.textContent = changes.length
+      ? `Applied: ${changes.length} change${changes.length === 1 ? "" : "s"}, listed below. Fine-tune them on the sliders and fields.`
+      : "Nothing to change: the block matches the voice already here.";
   });
-  $("test-result").addEventListener("click", (ev) => {
-    const i = ev.target.closest("[data-approve-test]")?.dataset.approveTest;
-    if (i == null || !lastTest) return;
-    const t = lastTest.texts[i];
-    approveExample(t.text, t.situation, lastTest.lang);
-    drawTest();
+  $("reply-result").addEventListener("click", (ev) => {
+    if (!ev.target.closest("#undo-reply") || !lastReply || lastReply.undone) return;
+    state = clone(lastReply.before);
+    lastReply.undone = true;
+    reload();
+    drawReply();
+    drawChat();
+    $("reply-status").textContent = "Back to the voice you had before this block.";
   });
-  $("test-result").addEventListener("click", (ev) => {
-    const button = ev.target.closest("[data-reject-test], [data-reject-cancel]");
-    if (!button || !lastTest) return;
-    rejecting = button.dataset.rejectTest != null ? lastTest.texts[button.dataset.rejectTest].text : null;
-    drawTest();
-    $("test-result").querySelector("[data-reject-form] input")?.focus();
-  });
-  $("test-result").addEventListener("submit", (ev) => {
-    ev.preventDefault();
-    const form = ev.target.closest("[data-reject-form]");
-    const reason = form?.querySelector("input").value;
-    if (!form || !lastTest) return;
-    if (!oneLine(reason)) { form.querySelector("input").focus(); return; }
-    const t = lastTest.texts[form.dataset.rejectForm];
-    rejectExample(t.text, reason, t.situation, lastTest.lang);
-    drawTest();
-    draw();
-  });
-  $("run-test").addEventListener("click", async () => {
-    const briefs = briefsOf();
-    const status = $("test-status");
-    if (!briefs.length) { status.textContent = "Write at least one request."; return; }
-    const button = $("run-test");
-    // The settings at the moment of asking: the reading is compared with these.
-    const asked = { version, state: clone(state), lang: testLang };
-    try {
-      const k = apiKey();
-      button.disabled = true;
-      lastTest = null;
-      rejecting = null;
-      drawTest();
-      status.textContent = briefs.length === 1 ? "Writing the text…" : `Writing ${briefs.length} texts…`;
-      const guide = buildGuide(asked.state, asked.lang);
-      const texts = await Promise.all(briefs.map((b) => writeBrief(k, guide, b.brief, briefSituation(b.situation))));
-      lastTest = { ...asked, texts: briefs.map((b, i) => ({ ...b, text: texts[i] })), reading: null, result: null };
-      drawTest();
-      // Blind: the reader gets the texts and the ruler, never the guide, the requests or the settings.
-      status.textContent = "Reading the texts blind…";
-      const reading = await diagnose(k, texts, { habits: false }); // the sliders only; the habits would cost more and go unused here
-      lastTest.reading = reading;
-      lastTest.result = compareReading(asked.state, briefs.map((b) => b.situation), reading);
-      drawTest();
-      status.textContent = "";
-    } catch (error) {
-      status.textContent = errorMessage(error) + (lastTest && !lastTest.result ? " The texts below were written, but the blind reading didn't run. Run the test again to retry." : "");
-    } finally {
-      button.disabled = false;
-    }
+  $("copy-current").addEventListener("click", async () => {
+    const ok = await copyText(continueMessage(state));
+    $("current-status").textContent = ok
+      ? "Copied. Paste it in the same conversation."
+      : "Couldn't copy automatically. Download the settings under \"Export guide\" and attach the file in the conversation.";
   });
 }
 
+store(OLD_API_KEY, null);
 buildControls();
 syncControls();
 renderExamples();

@@ -1,8 +1,9 @@
-// The guide test: Claude writes texts for new requests with the guide as its
-// only instructions, then a second call reads those texts blind, with the
-// ruler but without the guide or the settings, and places the sliders. This
-// module compares that reading with the settings and runs the meter on each
-// text. It makes no calls itself.
+// The guide test's scoring: an AI writes texts for new requests with the guide
+// as its only instructions, then a second, separate reading places the sliders
+// from those texts blind, with the ruler but without the guide or the settings.
+// This module compares that reading with the settings and runs the meter on
+// each text. It makes no calls itself. The site no longer runs the test, since
+// it needs two separate AI contexts; it is kept for the voice-building skill.
 
 import { FOUNDATION, AXES, FINISH, allSituations } from "./data.js";
 import { effectiveLevels, effectiveAddress } from "./compose.js";

@@ -2,6 +2,8 @@
 
 Build a brand's voice the way you build a video game character. Pick the foundation, move the temperament sliders and watch a sample text rewrite itself live. When you're done, export a Markdown voice guide ready to use as an AI system prompt.
 
+It works with any AI chat and needs no API key: the site never talks to an AI. You build the voice in a conversation with the chat you already use, and carry text between the two by copy and paste.
+
 The prototype came out of research on brand tone of voice with AI. Its main finding: adjectives ("friendly, innovative") tell a model nothing. Verifiable rules and real examples work. Here, every position of every slider becomes a concrete rule and an example sentence.
 
 ## What's in it
@@ -14,7 +16,7 @@ The prototype came out of research on brand tone of voice with AI. Its main find
 
 **The brand.** What the sliders can't say, all optional: what the brand does and for whom, who reads its texts, what it believes (up to 4 short beliefs), how a text opens and closes, what it never does (up to 6) and the word pairs it uses ("neighbors, not customers", up to 8). The guide puts the business, the reader and the beliefs in a section near the top, the opening, the closing and the "never" lines as concrete house rules, and the pairs in the vocabulary. Empty fields leave no trace in the guide. Each field has a length limit so the guide stays short and the link stays shareable.
 
-**Tone by situation.** The voice stays, the tone shifts. In a service outage, for example, humor and energy drop 2 points from the base voice. The built-in situations can be switched off when the brand doesn't write for them (at least one stays on), and you can add up to 6 of your own with a name, when it applies and an optional shift from -2 to +2 on any axis, the same shape as the built-in ones. Your own situations show up in the preview tabs, in the tags of the examples, in "Test the guide" and in the guide, spelled out like the built-in ones. They have no stock sentences, so their built text is a launch text at the situation's tone, and says so; "Write with Claude" writes the real one.
+**Tone by situation.** The voice stays, the tone shifts. In a service outage, for example, humor and energy drop 2 points from the base voice. The built-in situations can be switched off when the brand doesn't write for them (at least one stays on), and you can add up to 6 of your own with a name, when it applies and an optional shift from -2 to +2 on any axis, the same shape as the built-in ones. Your own situations show up in the preview tabs, in the tags of the examples, in "Test the guide" and in the guide, spelled out like the built-in ones. They have no stock sentences, so their built text is a launch text at the situation's tone, and says so; your AI writes the real one ("Copy the request for your AI", below).
 
 **Live preview in English and Portuguese.** One tab per situation in use (by default launch, service outage, customer question). Words that changed are highlighted for a moment.
 
@@ -39,9 +41,9 @@ Syllable counting and the word lists are approximations. Treat a failed check as
 
 **Ready-made characters and randomize.** Five starting voices and a dice button.
 
-**Approved examples.** The brand's real texts, each tagged with a situation (one of the ones in use, "General", or a label of your own), a language and where it came from: pasted by hand, kept from a diagnosis, or written by Claude and approved. These are the guide's examples, because examples are what a model imitates most. Without any, the guide falls back to the built texts, marked to the model as illustrations of the rules about a fictional product, not as the brand's subject matter.
+**Approved examples.** The brand's real texts, each tagged with a situation (one of the ones in use, "General", or a label of your own), a language and where it came from: pasted by hand, brought from your AI chat, or written by your AI and approved. These are the guide's examples, because examples are what a model imitates most. Without any, the guide falls back to the built texts, marked to the model as illustrations of the rules about a fictional product, not as the brand's subject matter.
 
-**Rejected texts.** Every "Approve as example" button (in the preview and in "Test the guide") has a "Reject" next to it, which asks for a short reason in a field right there. The text goes to a separate "Rejected texts" list, where the text, reason, situation and language can be edited or the text removed. A text is either approved or rejected: choosing the other option moves it. Approved examples also have an optional note, for you only. The guide gets a short "Not like this" section with the latest 4 rejected texts in the guide's language that have a reason, each marked with its reason. It tells the model to avoid the pattern the reason names, not the subject, and not to copy the phrases. That way the guide improves with use.
+**Rejected texts.** The "Approve as example" button under a text from your AI has a "Reject" next to it, which asks for a short reason in a field right there. The text goes to a separate "Rejected texts" list, where the text, reason, situation and language can be edited or the text removed. A text is either approved or rejected: choosing the other option moves it. Approved examples also have an optional note, for you only. The guide gets a short "Not like this" section with the latest 4 rejected texts in the guide's language that have a reason, each marked with its reason. It tells the model to avoid the pattern the reason names, not the subject, and not to copy the phrases. That way the guide improves with use.
 
 **Export.** Markdown guide, the checker and the skill package (below), settings as JSON, and a link with the voice encoded in the URL. The settings file carries everything. The link carries the voice, the brand fields and the situations (they are capped in length, so it stays shareable), but not the approved and rejected texts, since a few full texts would make it too long. Those stay in the browser, so opening a link keeps the ones you have. Settings files from before the brand fields and situations existed still load, with those left empty and the built-in situations in use.
 
@@ -49,28 +51,19 @@ Syllable counting and the word lists are approximations. Treat a failed check as
 
 **The guide is written for the model, not for a person.** It targets one language, chosen in the export dialog (it starts on the language most of the approved texts are in, else the one being previewed), and only carries that language's notes, illustrations and examples. The temperament comes in order of how much each axis defines the voice: an axis pushed to 1 or 5 gets its rule plus a "this, not this" pair taken from the neighbouring levels of its ladder (and a second "nor this" for the middle), an axis at 2 or 4 gets the rule and one pair, and axes left at 3 take one line each. Each situation is spelled out as the rules of the levels it lands on ("Energy drops to 1 of 5: Calm: no exclamation marks…") rather than as "energy −2". Readability is asked for in terms the model can follow while writing (word choice and average sentence length), not as a Flesch score; the meter still checks the score. The stock sentences about the fictional finance report appear only as illustrations, framed as such.
 
-## With Claude (optional)
+## With your AI chat
 
-With an Anthropic API key you can:
+No API key and no account. You use the chat you already have (Claude, ChatGPT, Gemini or another), and the site gives you what to paste there and reads back what comes out.
 
-- **Write with Claude:** generate the situation's text from the guide, in the language being previewed, to compare with the built text. One click approves it into the examples, or rejects it with a reason. It's a preview, not a test. With "What it does, and for whom" filled in, the text is about the brand's real business (details the guide doesn't give, like prices and dates, come out in [brackets]). Without it, a built-in situation is about the fictional product, a monthly finance report.
-- **Test the guide:** write one to three short requests of your own, the texts the brand would really need (a post about something new, an email about a change customers won't like, a reply to a late order), each with an optional situation. Claude writes each one with the guide as its only instructions. A second call then reads the texts blind: it gets the texts and the ruler of levels, never the guide, the requests or your settings, and places the sliders. The result is a score ("the guide carried 5 of 7 axes"), a table of set against read with the reader's reason per axis, the foundation and finish that didn't match, and the meter's failed checks on each text. Any of the texts can be approved into the examples or rejected with a reason. A test costs one call per request plus one for the reading, shown on the button before you run it.
+**Build the voice in a conversation.** "Use your AI chat" has three steps:
 
-How the test scores:
+1. **Start the conversation.** Copies a request to paste in a new conversation, held in English or Portuguese. The AI asks for real texts from the brand and a few questions, places the voice on the site's ruler with an excerpt as evidence per axis, looks for the brand's habits (how its texts open and close, the words it reaches for, its word pairs, what it never does), shows you the proposal, and when you confirm, gives a block of settings. The request works on its own: it carries the ruler and the format of the block. It also points to [`llms.txt`](llms.txt), a plain-text page with the same ruler plus an example sentence for every level, for chats that can read the web (the site itself is built by JavaScript, so a model that opens it sees an empty page). When something is already set here, the request can carry it as a starting point: the voice, the approved texts, and the rejected ones with their reasons. Untick that to start from scratch.
+2. **Bring the result back.** Paste the reply, or the whole conversation: the site finds the latest block in it. The block is JSON in the shape of the settings file, with lists as lists and situations by name. Keys it leaves out keep what the site has; its texts are added to the approved examples, skipping any already there. The reading forgives the slips models make: comments, trailing commas, curly quotes, line breaks inside a text, labels or Portuguese words instead of ids ("Formal you", "você"), levels written as "4 of 5", axes outside "axes". What it can't use, it leaves out and says so, one line per value. What changed is listed, with the AI's evidence next to each axis, and one button undoes it all. A settings file downloaded from the site can be pasted here too.
+3. **Keep going.** Copies the voice as it stands, to paste in the same conversation after you change it here, so the AI carries on from your adjustments.
 
-| What | Counts as carried |
-|---|---|
-| Each of the 7 axes | The blind reading lands within one level of the setting (✓ same level, ≈ one off, ! two or more) |
-| Who speaks, role | Exact match |
-| Who it talks to | Exact match, or the form the situation calls for (a reply to one person never says "you all") |
-| Sentence length, exclamation marks, emoji | The texts stay within the limit: no exclamation mark under "one per text" is fine, more than allowed is not |
+**Hear the voice on one situation.** Under the preview, "Copy the request for your AI" copies the guide plus a request for the situation's text, in the language being previewed. Paste it in any chat and paste the text back: it shows under "From your AI", the meter checks it, and it can be approved into the examples or rejected with a reason. With "What it does, and for whom" filled in, the request asks for a text about the brand's real business (details the guide doesn't give come out in [brackets]); without it, a built-in situation comes with its fictional case. If you change the voice after copying the request, the text is marked as written with earlier choices.
 
-One reading covers all the texts together, so when a request is tagged with a situation (built-in or your own) the expected level is the one the guide asks for there (an outage drops humor and energy), and with several texts it's the median of theirs. Untagged requests and free labels use the base voice. The guide already tells the model what the brand does, so the test requests only need to say what each text is about. A reading on fewer than 150 words in total is rough; the result says so.
-- **Diagnose my texts:** paste one to three real texts from the brand and Claude places the sliders, with a reason per axis. The texts are kept as approved examples, tagged with the situation you pick for each (untick the box to skip that). Undo puts the sliders back and leaves the examples.
-
-  The same reading also extracts the brand's **habits**: what the sliders can't say and what makes the voice recognisable. It looks for how the texts open and close, the words and expressions the brand reaches for, the words it uses where others use another ("neighbors", not "customers"), signature moves in punctuation, formatting and sentence shape, and what the texts never do. Each habit comes as something checkable rather than an adjective, with an excerpt copied from the texts as evidence and the numbers of the texts it was seen in; habits that rest on a single text are marked as such, and when the evidence is thin the list is empty rather than invented. The habits are written in the texts' language, the rest of the diagnosis in English. Nothing is applied on its own: the habits are listed with boxes (those seen in more than one text start ticked) and one button adds the ticked ones to the brand fields: openings and closings to "How a text opens/closes", avoided things to "We never…", pairs to "We say X, not Y" and recurring words to the preferred words. Nothing already in a field is replaced: a one-line field gets the habit after what's there, a list gets new lines, duplicates are skipped and each field keeps its limit. The same button then undoes it, putting those fields back; "Undo and go back" reverts the sliders and the fields together. Signature moves have no field yet, so they are shown with their evidence but not applied. The blind reading in "Test the guide" skips the habits, since it only needs the sliders.
-
-The key goes straight from the browser to Anthropic, with no server in between. It's only stored in the browser if you tick "remember". Use a test key with a spending limit. The model is `claude-opus-5-5`, with Anthropic's server-side fallback in case a request is declined by mistake.
+**What the site no longer does.** It used to call Claude with the visitor's own API key, to write, to diagnose texts and to run a blind test of the guide. That's gone, along with any key a browser remembered (it's removed on the next visit). The blind test needs two separate AI contexts, one to write with the guide and one to read the texts without it, which a single copy and paste can't give; its scoring (`js/guide-test.js`) stays in the code for a skill that builds the voice inside an agent.
 
 ## Running it
 
@@ -84,6 +77,8 @@ python3 -m http.server 8000
 
 Then open `http://localhost:8000`. Opening `index.html` straight from disk doesn't work, because JavaScript modules need a server.
 
+`llms.txt` is generated from the same data as the sliders. After changing `js/data.js`, `js/brand.js` or `js/prompts.js`, regenerate it with `node scripts/build-llms.mjs`. `npm test` checks that it's up to date and runs the tests of the block and the requests (Node 22 or newer, nothing to install).
+
 ## Layout
 
 | File | What it does |
@@ -93,14 +88,19 @@ Then open `http://localhost:8000`. Opening `index.html` straight from disk doesn
 | `js/scenes-en.js` | The same in English |
 | `js/compose.js` | Builds the sample text and applies the finish |
 | `js/meter.js` | Verifiable rules and readability formulas |
-| `js/brand.js` | The brand fields (limits, lists, word pairs), the cleanup of the brand's own situations, and the habits the diagnosis found: cleanup and applying them to the fields |
+| `js/brand.js` | The brand fields (limits, lists, word pairs) and the cleanup of the brand's own situations |
 | `js/examples.js` | Approved and rejected examples: situation tags, language guess and cleanup |
 | `js/checker.js` | Builds the standalone checker script from `js/meter.js` and this voice's settings, and the skill package |
 | `js/zip.js` | A small zip writer (stored files, no compression) for the skill package |
 | `js/guide.js` | Builds the Markdown guide and the combination warnings |
-| `js/guide-test.js` | The guide test's scoring: compares the blind reading with the settings and runs the meter on each text |
-| `js/claude.js` | Optional Claude calls: writing, and the diagnosis with its ruler and habits prompt |
+| `js/state.js` | Cleans any voice that comes in (storage, link, settings file, block) into a valid state, and encodes the link |
+| `js/block.js` | The block of settings between the site and a chat: writes the voice as a block, finds and reads the block in a pasted reply, lists what changed |
+| `js/prompts.js` | What the site hands over to paste into a chat (the request that starts a conversation, the voice as it stands, the request for one text) and the text of `llms.txt` |
+| `js/guide-test.js` | The blind test's scoring, kept for the voice-building skill; no screen uses it now |
 | `js/app.js` | Interface |
+| `llms.txt` | The page for models: what the site is, the ruler with an example sentence per level, and the block's format. Generated, not edited by hand |
+| `scripts/build-llms.mjs` | Writes `llms.txt`; with `--check`, fails when it's out of date |
+| `tests/` | Tests of the block and the requests, with replies broken the way models break them |
 
 ## Known limits
 
@@ -108,6 +108,7 @@ Then open `http://localhost:8000`. Opening `index.html` straight from disk doesn
 - Readability formulas only look at sentence and word length. They don't measure clarity or tone.
 - The readability targets per technicality level are suggestions, not an industry standard.
 - Humor and irreverence have no reliable automatic check.
+- How well a chat follows the request varies by model and plan. The site checks the block it gets back and the meter checks the texts, but it can't check the conversation itself.
 
 ## License
 
