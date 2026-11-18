@@ -15,7 +15,7 @@ test("the start request stands on its own and points to the page for models", ()
   assert.match(prompt, /Talk with me in Brazilian Portuguese/);
   assert.ok(prompt.includes(`${SITE_URL}${LLMS_FILE}`));
   for (const axis of AXES) assert.ok(prompt.includes(`${axis.id} (1 = ${axis.left}, 5 = ${axis.right})`), axis.id);
-  assert.match(prompt, /"brandVoiceCreator": 1/);
+  assert.match(prompt, /"aiWritingHelper": 1/);
 });
 
 test("the start request has no braces, so a pasted conversation never mistakes it for the block", () => {
@@ -23,37 +23,37 @@ test("the start request has no braces, so a pasted conversation never mistakes i
 });
 
 test("the starting point goes along only when asked, and reads back as the same voice", () => {
-  const voice = normalize({ ...clone(INITIAL_STATE), brand: "Flor", axes: { ...INITIAL_STATE.axes, humor: 1 }, examples: [{ text: "Saiu a fornada.", lang: "pt" }] });
+  const voice = normalize({ ...clone(INITIAL_STATE), name: "Flor", axes: { ...INITIAL_STATE.axes, humor: 1 }, examples: [{ text: "Saiu a fornada.", lang: "pt" }] });
   assert.ok(!startPrompt(voice).includes("## Starting point"));
   const prompt = startPrompt(voice, { fromHere: true });
   assert.match(prompt, /## Starting point/);
-  assert.match(prompt, /Its examples are real texts of the brand/);
+  assert.match(prompt, /Its examples are real texts in this voice/);
   const back = readReply(prompt, initial());
-  assert.equal(back.state.brand, "Flor");
+  assert.equal(back.state.name, "Flor");
   assert.equal(back.state.axes.humor, 1);
   assert.equal(back.state.examples[0].text, "Saiu a fornada.");
 });
 
 test("a site left as it opens has no starting point; any change makes one", () => {
   assert.equal(hasStartingPoint(initial()), false);
-  assert.equal(hasStartingPoint({ ...initial(), situation: "outage", applyShift: false }), false, "the view settings aren't the voice");
-  assert.equal(hasStartingPoint({ ...initial(), brand: "Flor" }), true);
+  assert.equal(hasStartingPoint({ ...initial(), situation: "badNews", applyShift: false }), false, "the view settings aren't the voice");
+  assert.equal(hasStartingPoint({ ...initial(), name: "Flor" }), true);
   assert.equal(hasStartingPoint({ ...initial(), examples: [{ text: "x", situation: "general", lang: "en", source: "pasted" }] }), true);
 });
 
 test("the message for the same conversation carries the voice as it stands", () => {
-  const back = readReply(continueMessage({ ...initial(), brand: "Flor" }), initial());
-  assert.equal(back.state.brand, "Flor");
+  const back = readReply(continueMessage({ ...initial(), name: "Flor" }), initial());
+  assert.equal(back.state.name, "Flor");
 });
 
 test("the request for one text carries the guide and the situation", () => {
-  const outage = SITUATIONS.find((s) => s.id === "outage");
-  const request = writeRequest(initial(), "pt", outage);
+  const bad = SITUATIONS.find((s) => s.id === "badNews");
+  const request = writeRequest(initial(), "pt", bad);
   assert.match(request, /<voice-guide>\n# Voice guide: Lumen/);
   assert.match(request, /in Brazilian Portuguese/);
-  assert.match(request, /Situation: Service outage \(something failed/);
-  assert.ok(request.includes(outage.summary), "without the business, the fictional case is the subject");
-  assert.match(writeRequest({ ...initial(), business: "Uma padaria" }, "pt", outage), /the brand's real business/);
+  assert.match(request, /Situation: Bad news \(something went wrong/);
+  assert.ok(request.includes(bad.summary), "without what it's about, the fictional case is the subject");
+  assert.match(writeRequest({ ...initial(), about: "Uma padaria" }, "pt", bad), /the real subject/);
 });
 
 test("llms.txt is up to date with the data", () => {

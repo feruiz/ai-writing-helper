@@ -1,6 +1,6 @@
-// The brand's approved texts. When there are any, they are the guide's
+// The writer's approved texts. When there are any, they are the guide's
 // examples. Each one is { text, situation, lang, source, note? }; the situation
-// is the id of a situation (built-in or the brand's own), "general", or a label the user typed. The
+// is the id of a situation (built-in or the writer's own), "general", or a label the user typed. The
 // texts the user turned down are kept the same way, with a reason instead of a
 // note, as { text, reason, situation, lang, source }.
 

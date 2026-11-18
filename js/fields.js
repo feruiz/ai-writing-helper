@@ -1,14 +1,14 @@
-// What the sliders can't say: what the brand does and for whom, what it
-// believes, how it opens and closes a text, what it never does, the word pairs
-// it uses, and its own situations. Each field is capped so the link to the
-// voice stays short enough to share, with everything in it.
+// What the sliders can't say: what the writing is about, who reads it, what
+// the writer believes, how a text opens and closes, what it never does, the
+// word pairs it uses, and the writer's own situations. Each field is capped so
+// the link to the voice stays short enough to share, with everything in it.
 
 import { AXES, SITUATIONS } from "./data.js";
 import { oneLine } from "./examples.js";
 
 // Longest text each field takes. Lists are one item per line.
-export const LIMITS = { business: 300, reader: 200, beliefs: 500, opening: 200, closing: 200, never: 600, pairs: 400 };
-export const BRAND_FIELDS = Object.keys(LIMITS);
+export const LIMITS = { about: 300, reader: 200, beliefs: 500, opening: 200, closing: 200, never: 600, pairs: 400 };
+export const ABOUT_FIELDS = Object.keys(LIMITS);
 // How many items a list takes into the guide, and how long each may be.
 export const MAX = { beliefs: 4, never: 6, pairs: 8, situations: 6 };
 const LINE = 120;

@@ -82,13 +82,14 @@ const SPEAKER_MARKERS = {
   },
 };
 
-export function speakerCounts(text, lang, brand) {
+// Third person counts mentions of the name, and of "the team" for a group that signs by name.
+export function speakerCounts(text, lang, name) {
   const m = SPEAKER_MARKERS[lang];
-  const name = brand.trim();
+  const own = String(name ?? "").trim();
   return {
     i: count(text, m.i),
     we: count(text, m.we),
-    brand: count(text, m.team) + (name ? count(text, wordRe([escapeRe(name)], "gu")) : 0),
+    byName: count(text, m.team) + (own ? count(text, wordRe([escapeRe(own)], "gu")) : 0),
   };
 }
 
@@ -133,7 +134,7 @@ export function findForbidden(text, forbidden) {
 
 // ---------- Measuring ----------
 
-const SPEAKER_NAME = { i: "\"I\"", we: "\"we\"", brand: "the brand" };
+const SPEAKER_NAME = { i: "\"I\"", we: "\"we\"", byName: "the name" };
 const ADDRESS_NAME = { you: "you (você)", youPlural: "you all (vocês)", formal: "formal you (o senhor)", impersonal: "impersonal" };
 
 export function measure(text, { state, lang = "pt", levels, address }) {
@@ -146,15 +147,15 @@ export function measure(text, { state, lang = "pt", levels, address }) {
   const rows = [];
 
   // Who speaks: the dominant marker must match the choice (nothing detected is fine)
-  const sp = speakerCounts(text, lang, state.brand);
+  const sp = speakerCounts(text, lang, state.name);
   const top = Object.entries(sp).sort((a, b) => b[1] - a[1])[0];
   const detected = top[1] > 0 ? top[0] : null;
   rows.push({
     name: "Who speaks",
     value: detected ? `mostly ${SPEAKER_NAME[detected]}` : "not detected",
     ok: !detected || detected === state.speaker,
-    detail: `expected ${SPEAKER_NAME[state.speaker]}; I ${sp.i}, we ${sp.we}, brand ${sp.brand}`,
-    help: "Counts first-person pronouns and verb forms (\"I\", \"we\", \"lançamos\") and mentions of the brand name. Passes when the most frequent one matches the choice.",
+    detail: `expected ${SPEAKER_NAME[state.speaker]}; I ${sp.i}, we ${sp.we}, name ${sp.byName}`,
+    help: "Counts first-person pronouns and verb forms (\"I\", \"we\", \"lançamos\") and mentions of the name. Passes when the most frequent one matches the choice.",
   });
 
   // Who it talks to: no marker of a different address may appear

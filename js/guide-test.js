@@ -19,7 +19,7 @@ export const TOLERANCE = 1;
 // Calls one test makes: one text per request, then one reading of them all.
 export const testCalls = (briefs) => (briefs > 0 ? briefs + 1 : 0);
 
-// What a text for this situation tag should show. A known situation (built-in or the brand's own) moves
+// What a text for this situation tag should show. A known situation (built-in or the writer's own) moves
 // the tone the way the guide tells it to (the guide always spells the shifts
 // out, whatever the preview's "Apply shift" box says); "general" or a free label uses the base voice.
 export function expectedFor(state, tag) {

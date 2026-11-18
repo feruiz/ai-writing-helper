@@ -7,8 +7,8 @@ import { SCENES_EN, contextEn, greetingEn, CONTRACTIONS } from "./scenes-en.js";
 
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
-// The brand's own situations have no stock sentences: their preview borrows the launch scene.
-const sceneKey = (id) => (SCENES_PT[id] ? id : "launch");
+// The writer's own situations have no stock sentences: their preview borrows the good news scene.
+const sceneKey = (id) => (SCENES_PT[id] ? id : "goodNews");
 
 // Adds the situation's shift to the base temperament, staying within 1 to 5.
 export function effectiveLevels(state, situationId) {

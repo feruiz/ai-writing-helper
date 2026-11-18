@@ -8,37 +8,40 @@
 // back as a note.
 
 import { FOUNDATION, AXES, FINISH, SITUATIONS, allSituations, activeSituations } from "./data.js";
-import { LIMITS, MAX, MAX_SHIFT, newSituationId, ignoredPairs } from "./brand.js";
+import { LIMITS, MAX, MAX_SHIFT, newSituationId, ignoredPairs } from "./fields.js";
 import { situationName, situationTag, guessLang, oneLine } from "./examples.js";
 import { listOf } from "./meter.js";
-import { clone, normalize } from "./state.js";
+import { clone, normalize, migrate } from "./state.js";
 
-// The key that tells the site a JSON object is the block.
-export const MARKER = "brandVoiceCreator";
+// The key that tells the site a JSON object is the block; the old one, from
+// when the site was Brand Voice Creator, still counts.
+export const MARKER = "aiWritingHelper";
+const OLD_MARKER = "brandVoiceCreator";
+const isMarked = (o) => MARKER in o || OLD_MARKER in o;
 
 // The fields as the site's labels name them, for the notes and the list of changes.
 export const FIELD_LABELS = {
-  brand: "Brand name",
+  name: "Name",
   article: "Article in Portuguese",
   essence: "Essence",
-  business: "What it does, and for whom",
-  reader: "Who reads its texts",
+  about: "What it's about",
+  reader: "Who reads it",
   beliefs: "What it believes",
   opening: "How a text opens",
   closing: "How a text closes",
-  never: "We never…",
-  pairs: "We say X, not Y",
+  never: "Never…",
+  pairs: "Say X, not Y",
   preferred: "Preferred words",
   forbidden: "Forbidden words",
 };
-// Longest text each one-line field takes; the brand fields' limits come from brand.js.
-const TEXT_LIMITS = { brand: 40, essence: 300, business: LIMITS.business, reader: LIMITS.reader, opening: LIMITS.opening, closing: LIMITS.closing };
+// Longest text each one-line field takes; the other fields' limits come from fields.js.
+const TEXT_LIMITS = { name: 40, essence: 300, about: LIMITS.about, reader: LIMITS.reader, opening: LIMITS.opening, closing: LIMITS.closing };
 const LINE_LISTS = ["beliefs", "never", "pairs"]; // one item per line
 const WORD_LISTS = ["preferred", "forbidden"]; // comma separated
 const CHOICES = { ...FOUNDATION, ...FINISH };
 // The site's own view settings: a settings file carries them, and they are skipped here.
 const VIEW_KEYS = ["situation", "applyShift"];
-const KNOWN = new Set([MARKER, ...Object.keys(TEXT_LIMITS), "article", ...LINE_LISTS, ...WORD_LISTS, ...Object.keys(CHOICES), "axes", "customSituations", "hiddenSituations", "examples", "rejected", "reasons", ...VIEW_KEYS]);
+const KNOWN = new Set([MARKER, OLD_MARKER, ...Object.keys(TEXT_LIMITS), "article", ...LINE_LISTS, ...WORD_LISTS, ...Object.keys(CHOICES), "axes", "customSituations", "hiddenSituations", "examples", "rejected", "reasons", ...VIEW_KEYS]);
 
 const isObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 const linesIn = (text) => String(text ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
@@ -62,10 +65,10 @@ export function voiceBlock(state) {
   const rejected = state.rejected.filter((e) => e.text.trim()).map((e) => ({ ...text(e), reason: e.reason }));
   return {
     [MARKER]: 1,
-    brand: state.brand,
+    name: state.name,
     article: state.article,
     essence: state.essence,
-    business: state.business,
+    about: state.about,
     reader: state.reader,
     beliefs: linesIn(state.beliefs),
     opening: state.opening,
@@ -135,7 +138,8 @@ function parseLoose(raw) {
   return undefined;
 }
 
-const voiceKeys = (o) => Object.keys(o).filter((k) => KNOWN.has(k) && k !== MARKER).length;
+// Old keys ("brand", "business") count as the new ones.
+const voiceKeys = (o) => Object.keys(migrate(o)).filter((k) => KNOWN.has(k) && k !== MARKER && k !== OLD_MARKER).length;
 
 // The block in the pasted text: the last object marked as the block, or, when
 // none is marked, the last one that looks like a voice. The last, because a
@@ -158,7 +162,7 @@ export function findBlock(text) {
     else unreadable++;
     i = s.indexOf("{", end + 1);
   }
-  const marked = objects.filter((o) => MARKER in o);
+  const marked = objects.filter(isMarked);
   const found = (marked.length ? marked : objects.filter((o) => voiceKeys(o) >= 2)).at(-1);
   if (found) return { value: found };
   if (cut) return { error: "The block looks cut off: it starts but never closes. Ask the AI to give the whole block again, in one code block." };
@@ -172,8 +176,9 @@ const axisFor = (key) => {
   const k = String(key).trim().toLowerCase();
   return AXES.find((a) => a.id.toLowerCase() === k || a.name.toLowerCase() === k);
 };
-// The Portuguese words the ruler quotes for an option, which a model may give instead of its id.
-const ALIASES = { we: ["nós"], i: ["eu"], you: ["você"], youPlural: ["vocês"], formal: ["o senhor", "o(a) senhor(a)", "senhor"] };
+// The Portuguese words the ruler quotes for an option, and the old id of
+// third person, which a model may give instead of the id.
+const ALIASES = { we: ["nós"], i: ["eu"], byName: ["brand", "the brand", "third person", "name"], you: ["você"], youPlural: ["vocês"], formal: ["o senhor", "o(a) senhor(a)", "senhor"] };
 // An option by its id, its label ("We", "You (você)", or just "You") or its Portuguese word.
 const optionFor = (group, v) => {
   if (typeof v !== "string") return undefined;
@@ -206,7 +211,9 @@ const langOf = (v, text) => {
 
 // The voice with the block merged in: { state, notes, reasons, added }.
 // "reasons" are the chat's evidence per axis, when it gave any.
-export function readBlock(block, current) {
+export function readBlock(input, current) {
+  // a block from before the rename uses the old names
+  const block = migrate(input);
   const next = clone(current);
   const notes = [];
   const note = (s) => notes.push(s);
@@ -307,7 +314,7 @@ export function readBlock(block, current) {
     }
   }
 
-  // Situations: the brand's own replace the ones here (a situation with the
+  // Situations: the writer's own replace the ones here (a situation with the
   // same name keeps its id, so the texts tagged with it stay tagged)
   if ("customSituations" in block) {
     const list = block.customSituations;
@@ -396,7 +403,7 @@ export function changesBetween(before, after) {
     if (before[key] !== after[key]) add(key, group.title, `${optionLabel(group, before[key])} → ${optionLabel(group, after[key])}`);
   };
 
-  ["brand", "article", "essence", "business", "reader"].forEach(text);
+  ["name", "article", "essence", "about", "reader"].forEach(text);
   list("beliefs");
   ["opening", "closing"].forEach(text);
   list("never");

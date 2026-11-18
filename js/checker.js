@@ -12,7 +12,7 @@ import { zip } from "./zip.js";
 export const CHECKER_FILE = "check-voice.mjs";
 const LANGUAGE_NAME = { en: "English", pt: "Portuguese" };
 
-export const slugOf = (name) => (name.trim() || "brand").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "brand";
+export const slugOf = (name) => (name.trim() || "voice").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "voice";
 
 let meterSource;
 // meter.js as plain script text: no imports to resolve, so dropping "export" is all it takes.
@@ -38,10 +38,10 @@ export function checkerConfig(state, lang) {
     address: effectiveAddress(state, s.id),
   }));
   return {
-    brand: state.brand.trim() || "Lumen",
+    name: state.name.trim() || "Lumen",
     lang,
     state: {
-      brand: state.brand,
+      name: state.name,
       speaker: state.speaker,
       sentenceLength: state.sentenceLength,
       exclamation: state.exclamation,
@@ -69,7 +69,7 @@ const HINTS = {
 };
 
 const USAGE = [
-  "Checks a draft against " + CONFIG.brand + "'s voice rules.",
+  "Checks a draft against " + CONFIG.name + "'s voice rules.",
   "",
   "  node check-voice.mjs draft.txt [--situation NAME] [--lang en|pt]",
   "  cat draft.txt | node check-voice.mjs [--situation NAME]",
@@ -115,7 +115,7 @@ if (!text.trim()) fail("The draft is empty.");
 
 const rows = measure(text, { state: CONFIG.state, lang, levels: expected.levels, address: expected.address });
 const bad = rows.filter((r) => !r.ok);
-console.log("Voice check: " + CONFIG.brand + ", " + situationName + ", " + (lang === "en" ? "English" : "Portuguese"));
+console.log("Voice check: " + CONFIG.name + ", " + situationName + ", " + (lang === "en" ? "English" : "Portuguese"));
 for (const r of rows) {
   console.log((r.ok ? "ok    " : "FAIL  ") + r.name + ": " + r.value + (r.ok ? "" : " (" + r.detail + ")"));
   if (!r.ok) console.log("      Fix: " + (HINTS[r.name] || "Bring it within the rule."));
@@ -129,7 +129,7 @@ export async function buildChecker(state, lang) {
   const config = checkerConfig(state, lang);
   return [
     "#!/usr/bin/env node",
-    "// Voice checker for " + config.brand.replace(/[\r\n]+/g, " ") + ", made with Brand Voice Creator.",
+    "// Voice checker for " + config.name.replace(/[\r\n]+/g, " ") + ", made with AI Writing Helper.",
     "// Usage: node check-voice.mjs draft.txt [--situation NAME]   (or pipe the draft in)",
     "// Standalone: Node 18 or newer, no dependencies. The checks below are the app's meter.",
     "",
@@ -149,8 +149,8 @@ export async function buildChecker(state, lang) {
 
 // SKILL.md: frontmatter, then the guide with the line that tells the model to run the checker.
 export function buildSkillMd(state, lang) {
-  const name = state.brand.trim() || "Lumen";
-  const skill = `voice-${slugOf(state.brand)}`;
+  const name = state.name.trim() || "Lumen";
+  const skill = `voice-${slugOf(state.name)}`;
   const description = `Writes in ${name}'s voice, in ${LANGUAGE_NAME[lang]}. Use whenever you draft or edit text for ${name} (posts, emails, replies, announcements), and check each draft with the bundled script before replying.`;
   return { skill, md: ["---", `name: ${skill}`, `description: ${JSON.stringify(description)}`, "---", "", buildGuide(state, lang, { checker: CHECKER_FILE }), ""].join("\n") };
 }

@@ -1,22 +1,22 @@
 // Builds the tone of voice file in Markdown, written for the model that will
 // get it as a system prompt: one language; the traits that define the voice
 // first, each with a "this, not this" pair from the ladder; situations spelled
-// out as the rules of their shifted levels (the brand's own included); what the
-// brand does, believes and never does near the top, and the brand's approved texts as
-// examples. Without approved texts, built texts stand in, marked as
-// illustrations of the rules only.
+// out as the rules of their shifted levels (the writer's own included); what the
+// writing is about, what the writer believes and never does near the top, and
+// the approved texts as examples. Without approved texts, built texts stand in,
+// marked as illustrations of the rules only.
 
 import { FOUNDATION, AXES, FINISH, SITUATIONS, allSituations, activeSituations } from "./data.js";
 import { composeText, effectiveLevels, effectiveAddress } from "./compose.js";
 import { listOf } from "./meter.js";
 import { LANGUAGES, situationName } from "./examples.js";
-import { beliefsOf, neverOf, pairsOf } from "./brand.js";
+import { beliefsOf, neverOf, pairsOf } from "./fields.js";
 
 // How many rejected texts the guide carries: the latest ones, so they stay a footnote.
 export const MAX_REJECTED = 4;
 
 const option = (group, id) => group.options.find((o) => o.id === id);
-const brandName = (state) => state.brand.trim() || "Lumen";
+const nameOf = (state) => state.name.trim() || "Lumen";
 const pole = (axis, n) => (n < 3 ? axis.left : axis.right);
 const distance = (state, axis) => Math.abs(state.axes[axis.id] - 3);
 const byDistance = (state) => (a, b) => distance(state, b) - distance(state, a);
@@ -36,7 +36,7 @@ export function defaultEssence(state) {
     .slice(0, 3)
     .map((a) => pole(a, state.axes[a.id]).toLowerCase());
   const article = /^[aeiou]/.test(role) ? "an" : "a";
-  return `${brandName(state)} speaks like ${article} ${role}${traits.length ? `: ${traits.join(", ")}` : ", in a balanced tone"}.`;
+  return `${nameOf(state)} speaks like ${article} ${role}${traits.length ? `: ${traits.join(", ")}` : ", in a balanced tone"}.`;
 }
 
 export function warnings(state) {
@@ -47,7 +47,7 @@ export function warnings(state) {
   if (state.address === "formal" && a.formality >= 4) list.push("\"O(a) senhor(a)\" in a casual text sounds odd.");
   if (state.sentenceLength === "short" && a.style >= 4) list.push("Short sentences limit the lyrical style: images need room.");
   if (state.emoji === "free" && a.formality <= 2) list.push("Free use of emoji doesn't fit a formal text.");
-  if (a.certainty === 5) list.push("Maximum certainty tends to promise what the brand can't guarantee. State in the guide what must never be promised.");
+  if (a.certainty === 5) list.push("Maximum certainty tends to promise what the writer can't guarantee. State in the guide what must never be promised.");
   if (a.humor >= 4 && a.energy <= 1) list.push("High humor with minimum energy becomes deadpan. It works, but it's rare: make sure that's the intent.");
   return list;
 }
@@ -56,7 +56,7 @@ export function warnings(state) {
 // writing: word choice and average sentence length, by position on
 // Simple ↔ Technical. The meter checks the same thing with a Flesch score.
 const READABILITY = {
-  1: { words: "Short, everyday words, the ones a customer uses at home; never a long word where a short one exists.", average: 12 },
+  1: { words: "Short, everyday words, the ones a reader uses at home; never a long word where a short one exists.", average: 12 },
   2: { words: "Mostly short, common words; a long or technical word only when the short one would be wrong.", average: 15 },
   3: { words: "Common words carry the text; keep long or technical words to a few per paragraph.", average: 18 },
   4: { words: "Technical words are expected; keep the sentences around them short so they don't pile up.", average: 22 },
@@ -69,13 +69,13 @@ const WORDING = {
     speaker: (state, name) => ({
       we: "\"we\", first person plural (\"we launched\", \"our\").",
       i: "\"I\": a real person signs (\"I launched\", \"my\").",
-      brand: `the brand in third person, by name and without an article ("${name} launched").`,
+      byName: `the name in third person, without an article ("${name} launched").`,
     })[state.speaker],
     address: {
       you: "the reader, as \"you\".",
       youPlural: "a group: \"you\", with group greetings (\"Hi everyone\").",
       formal: "the reader in a formal register, since English has no \"o senhor\": no contractions, \"Dear\" in greetings, \"please\" in requests.",
-      impersonal: "nobody directly: impersonal constructions and the passive voice (\"the report is available\").",
+      impersonal: "nobody directly: impersonal constructions and the passive voice (\"the new issue is out\").",
     },
     oneReader: "Written to one person: \"you\", never a group greeting.",
     formality: (n) => (n >= 4 ? "Contractions (\"we're\", \"you'll\") are the norm." : n === 3 ? "No contractions (\"we're\", \"you'll\")." : "No contractions or colloquial words (\"we're\", \"hey\", \"folks\")."),
@@ -87,7 +87,7 @@ const WORDING = {
     speaker: (state, name) => ({
       we: "\"nós\", usually with the subject dropped (\"lançamos\", \"nosso\").",
       i: "\"eu\", usually with the subject dropped (\"lancei\", \"meu\").",
-      brand: `the brand in third person, by name with its article ("${state.article === "none" ? name : `${state.article} ${name}`} lançou").`,
+      byName: `the name in third person, with its article ("${state.article === "none" ? name : `${state.article} ${name}`} lançou").`,
     })[state.speaker],
     address: {
       you: "the reader, as \"você\".",
@@ -104,7 +104,7 @@ const WORDING = {
 
 // checker: the file name of the voice checker, when the guide ships with one (the skill package).
 export function buildGuide(state, lang = guideLanguage(state), { checker = "" } = {}) {
-  const name = brandName(state);
+  const name = nameOf(state);
   const w = WORDING[lang];
   const lines = [];
   const add = (...l) => lines.push(...l);
@@ -115,16 +115,16 @@ export function buildGuide(state, lang = guideLanguage(state), { checker = "" } 
   if (checker) add(`Before you deliver a draft, save it to a file and run \`node ${checker} draft.txt\` from this folder (add \`--situation "Name"\` for a situation listed under "Tone by situation"). Fix every line marked FAIL and run it again; reply only once it passes.`, "");
   add(`**Essence.** ${state.essence.trim() || defaultEssence(state)}`, "");
 
-  // What the brand is, from the brand fields; each one is left out when empty.
-  const business = state.business?.trim();
+  // What the writing is, from the fields about it; each one is left out when empty.
+  const about = state.about?.trim();
   const reader = state.reader?.trim();
   const beliefs = beliefsOf(state.beliefs);
-  if (business || reader || beliefs.length) {
+  if (about || reader || beliefs.length) {
     add(`## About ${name}`, "");
-    if (business) add(`- **What it does:** ${business}`);
-    if (reader) add(`- **Who it writes for:** ${reader}`);
+    if (about) add(`- **Writes about:** ${about}`);
+    if (reader) add(`- **Read by:** ${reader}`);
     if (beliefs.length) {
-      add("- **What it believes:** the voice comes from these. Let them show in what you choose to say, without stating them outright.");
+      add("- **Believes:** the voice comes from these beliefs. Let them show in what you choose to say, without stating them outright.");
       for (const b of beliefs) add(`  - ${b}`);
     }
     add("");
@@ -142,7 +142,7 @@ export function buildGuide(state, lang = guideLanguage(state), { checker = "" } 
   const sorted = [...AXES].sort(byDistance(state));
   const defining = sorted.filter((a) => distance(state, a) > 0);
   const neutral = sorted.filter((a) => distance(state, a) === 0);
-  add(`Seven axes, each from 1 to 5. ${defining.length ? "They come in order of how much they define the voice: the first ones matter most." : "None is pushed to either side: the voice is balanced on all seven."} The quoted sentences are illustrations of the voice only. All of them are about a fictional product, a monthly finance report, so the levels can be compared on the same message; they say nothing about ${name}.`, "");
+  add(`Seven axes, each from 1 to 5. ${defining.length ? "They come in order of how much they define the voice: the first ones matter most." : "None is pushed to either side: the voice is balanced on all seven."} The quoted sentences are illustrations of the voice only. All of them are about the same fictional newsletter, so the levels can be compared on the same message; they say nothing about ${name}.`, "");
   for (const axis of defining) {
     const n = state.axes[axis.id];
     const step = n < 3 ? n + 1 : n - 1; // one level toward the opposite pole
@@ -173,7 +173,7 @@ export function buildGuide(state, lang = guideLanguage(state), { checker = "" } 
   if (state.axes.certainty >= 4) add(`- ${w.noHedge}`);
   add("");
 
-  // How a text opens and closes, and what the brand never does: rules to check a draft against.
+  // How a text opens and closes, and what it never does: rules to check a draft against.
   const opening = state.opening?.trim();
   const closing = state.closing?.trim();
   const never = neverOf(state.never);
@@ -217,12 +217,12 @@ export function buildGuide(state, lang = guideLanguage(state), { checker = "" } 
   if (approved.length) {
     const own = approved.filter((e) => e.lang === lang);
     const shown = own.length ? own : approved;
-    add(`Real texts ${name} has approved${own.length ? "" : `, in ${LANGUAGES[approved[0].lang]}; carry their voice into ${w.name}`}. They are the best evidence of the voice: match their word choice, rhythm and the way they open and close, whatever the subject you're asked to write about. Don't copy their sentences or reuse their facts.`, "");
+    add(`Real texts in ${name}'s voice, approved${own.length ? "" : `, in ${LANGUAGES[approved[0].lang]}; carry their voice into ${w.name}`}. They are the best evidence of the voice: match their word choice, rhythm and the way they open and close, whatever the subject you're asked to write about. Don't copy their sentences or reuse their facts.`, "");
     for (const e of shown) {
       add(`<example language="${LANGUAGES[e.lang]}" situation="${situationName(e.situation, allSituations(state)).replace(/"/g, "'")}">`, e.text.trim(), "</example>", "");
     }
   } else {
-    add(`${name} has no approved texts here yet. The texts below are assembled from stock sentences about the same fictional product, a monthly finance report, only to show how the rules above sound together. They say nothing about ${name}'s business: take the voice from them, never the subject, the facts or the structure.`, "");
+    add(`${name} has no approved texts here yet. The texts below are assembled from stock sentences about the same fictional newsletter, only to show how the rules above sound together. They say nothing about what ${name} writes about: take the voice from them, never the subject, the facts or the structure.`, "");
     const stock = SITUATIONS.filter((s) => !state.hiddenSituations?.includes(s.id));
     for (const s of stock.length ? stock : SITUATIONS) {
       add(`<illustration situation="${s.name}" context="${s.summary}">`, composeText({ ...state, applyShift: true }, s.id, lang), "</illustration>", "");
@@ -233,7 +233,7 @@ export function buildGuide(state, lang = guideLanguage(state), { checker = "" } 
   const rejected = (state.rejected || []).filter((e) => e.text.trim() && e.reason?.trim() && e.lang === lang).slice(-MAX_REJECTED);
   if (rejected.length) {
     add("## Not like this", "");
-    add(`Texts ${name} turned down, each with the reason. The reason names the pattern to avoid. The subject of a rejected text is fine to write about; just don't copy their phrases. Check your draft against each reason before you answer.`, "");
+    add(`Texts turned down for ${name}, each with the reason. The reason names the pattern to avoid. The subject of a rejected text is fine to write about; just don't copy their phrases. Check your draft against each reason before you answer.`, "");
     for (const e of rejected) {
       add(`<rejected situation="${situationName(e.situation, allSituations(state)).replace(/"/g, "'")}" reason="${e.reason.trim().replace(/"/g, "'")}">`, e.text.trim(), "</rejected>", "");
     }

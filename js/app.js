@@ -3,25 +3,26 @@ import { composeText, effectiveLevels, effectiveAddress } from "./compose.js";
 import { measure, findForbidden } from "./meter.js";
 import { buildGuide, guideLanguage, warnings, defaultEssence } from "./guide.js";
 import { LANGUAGES, SOURCES, situationName, situationTag, guessLang, oneLine } from "./examples.js";
-import { BRAND_FIELDS, MAX, MAX_SHIFT, ignoredPairs, newSituationId } from "./brand.js";
+import { ABOUT_FIELDS, MAX, MAX_SHIFT, ignoredPairs, newSituationId } from "./fields.js";
 import { buildChecker, buildSkillZip, slugOf, CHECKER_FILE } from "./checker.js";
 import { clone, encode, decode, normalize, linkState } from "./state.js";
 import { readReply, changesBetween } from "./block.js";
 import { startPrompt, continueMessage, writeRequest, hasStartingPoint } from "./prompts.js";
 
 const $ = (id) => document.getElementById(id);
-const STATE_KEY = "brand-voice-creator:state";
-const LANG_KEY = "brand-voice-creator:lang";
-// Where the site used to keep an Anthropic API key, when it called Claude itself.
-// It no longer needs one, so a key left there is removed on load.
-const OLD_API_KEY = "brand-voice-creator:api-key";
+const STATE_KEY = "ai-writing-helper:state";
+const LANG_KEY = "ai-writing-helper:lang";
+// What the site saved when it was Brand Voice Creator, on the same origin: the
+// voice and the language move to the new keys on load. The API key, from when
+// the site called Claude itself, is no longer needed and is removed.
+const OLD_KEYS = { state: "brand-voice-creator:state", lang: "brand-voice-creator:lang", apiKey: "brand-voice-creator:api-key" };
 
 // Local storage can fail (private window, blocked storage); nothing here depends on it.
 const store = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} };
 const load = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 
 // The fields typed straight into the state.
-const TEXT_FIELDS = ["brand", "article", "essence", "preferred", "forbidden", ...BRAND_FIELDS];
+const TEXT_FIELDS = ["name", "article", "essence", "preferred", "forbidden", ...ABOUT_FIELDS];
 
 const escapeHtml = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
@@ -29,7 +30,7 @@ const escapeHtml = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt
 
 function initialState() {
   let saved = null;
-  const raw = load(STATE_KEY);
+  const raw = load(STATE_KEY) ?? load(OLD_KEYS.state);
   if (raw) { try { saved = normalize(JSON.parse(raw)); } catch {} }
   const hash = location.hash.match(/v=([\w-]+)/);
   // Examples and rejected texts stay in this browser, whatever voice the link brings.
@@ -38,7 +39,7 @@ function initialState() {
 }
 
 let state = initialState();
-let lang = load(LANG_KEY) === "pt" ? "pt" : "en";
+let lang = (load(LANG_KEY) ?? load(OLD_KEYS.lang)) === "pt" ? "pt" : "en";
 let guideLang = lang; // the language the exported guide tells the model to write in
 let source = "built"; // the preview's text: "built" from stock sentences, or "ai" when pasted from a chat
 let lastAxis = "style";
@@ -102,7 +103,7 @@ function refreshSituations() {
 const SHIFTS = Array.from({ length: 2 * MAX_SHIFT + 1 }, (_, i) => i - MAX_SHIFT);
 const shiftLabel = (d) => (d > 0 ? `+${d}` : d < 0 ? `−${-d}` : "0");
 
-// Built-in situations can be switched off; the brand's own ones are edited here.
+// Built-in situations can be switched off; the writer's own ones are edited here.
 function renderSituations() {
   const lastActive = activeSituations(state).length <= 1;
   $("situation-list").innerHTML = `
@@ -305,7 +306,7 @@ function drawShift() {
   const situation = allSituations(state).find((s) => s.id === state.situation);
   const shifts = Object.entries(situation.shift);
   const box = $("shift");
-  // the brand's own situations have no stock case: the built text borrows a launch scene
+  // the writer's own situations have no stock case: the built text borrows the good news scene
   const summary = situation.summary || `${situation.when || "Your own situation"}. The built text is a stock illustration at this tone, not about this situation; your AI writes the real one ("Copy the request for your AI")`;
   if (!shifts.length) { box.innerHTML = `<span>${escapeHtml(summary)}. Base voice, no tone shift here.</span>`; return; }
   const levels = effectiveLevels({ ...state, applyShift: true }, situation.id);
@@ -325,7 +326,7 @@ function draw() {
   }
   for (const id of Object.keys(FOUNDATION)) {
     const hint = document.querySelector(`[data-hint="${id}"]`);
-    if (hint) hint.textContent = FOUNDATION[id].options.find((o) => o.id === state[id]).guide.replace("{brand}", state.brand || "Lumen");
+    if (hint) hint.textContent = FOUNDATION[id].options.find((o) => o.id === state[id]).guide.replace("{name}", state.name.trim() || "Lumen");
   }
   $("essence").placeholder = defaultEssence(state);
   const ignored = ignoredPairs(state.pairs);
@@ -505,7 +506,7 @@ function bindEvents() {
     if (id) { source = id; pasting = false; draw(); }
   });
 
-  // Situations: switch built-ins on and off, add and edit the brand's own
+  // Situations: switch built-ins on and off, add and edit the writer's own
   $("situation-list").addEventListener("change", (ev) => {
     const el = ev.target;
     if (el.dataset.builtin) {
@@ -656,7 +657,7 @@ function bindEvents() {
       ? `Its examples are your ${own} approved text${own === 1 ? "" : "s"} in this language${other ? `; the ${other} in the other language stay${other === 1 ? "s" : ""} out` : ""}. The link to this voice carries the settings but not the examples; download the settings to keep those.`
       : other
         ? `Its examples are your ${other} approved text${other === 1 ? "" : "s"}, which are in the other language; the guide asks the model to carry their voice over.`
-        : "There are no approved texts yet, so the examples are stock illustrations about a fictional product. Add the brand's real texts under \"Approved examples\" to make the guide its own.");
+        : "There are no approved texts yet, so the examples are stock illustrations about a fictional newsletter. Add real texts in this voice under \"Approved examples\" to make the guide its own.");
   };
   $("open-export").addEventListener("click", () => {
     // the examples' language, else the one being previewed
@@ -677,7 +678,7 @@ function bindEvents() {
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
-  const slug = () => slugOf(state.brand);
+  const slug = () => slugOf(state.name);
   $("copy-guide").addEventListener("click", () => copy($("guide").value, "Guide copied."));
   $("download-guide").addEventListener("click", () => download(`voice-guide-${slug()}-${guideLang}.md`, $("guide").value, "text/markdown"));
   const build = async (make, name, type) => {
@@ -709,7 +710,7 @@ function bindEvents() {
       showGuide();
       notify("Settings loaded.");
     } catch {
-      notify("This file isn't a Brand Voice Creator settings file.");
+      notify("This file isn't a settings file from this site.");
     }
     ev.target.value = "";
   });
@@ -768,7 +769,9 @@ function bindEvents() {
   });
 }
 
-store(OLD_API_KEY, null);
+if (load(STATE_KEY) === null && load(OLD_KEYS.state) !== null) store(STATE_KEY, JSON.stringify(state));
+if (load(LANG_KEY) === null && load(OLD_KEYS.lang) !== null) store(LANG_KEY, lang);
+for (const key of Object.values(OLD_KEYS)) store(key, null);
 buildControls();
 syncControls();
 renderExamples();
