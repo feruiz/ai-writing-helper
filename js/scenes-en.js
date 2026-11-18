@@ -4,7 +4,7 @@
 
 const sentence = (t, exclaimable = false) => ({ t, exclaimable });
 
-// Forms by speaker: [I, we, the brand]
+// Forms by speaker: [I, we, by name]
 const VERBS = {
   apologize: ["apologize", "apologize", "apologizes"],
   thank: ["thank", "thank", "thanks"],
@@ -23,32 +23,35 @@ export const CONTRACTIONS = [
   [/\bdo not\b/g, "don't"],
   [/\bwill not\b/g, "won't"],
   [/\bis not\b/g, "isn't"],
+  [/\bwould not\b/g, "wouldn't"],
 ];
 
-const YOU = { pron: "you", obj: " you", with: " with you", for: " for you", poss: "your" };
+const YOU = { pron: "you", obj: " you", with: " with you", poss: "your" };
 const ADDRESS = {
   you: YOU,
   youPlural: YOU,
   formal: YOU,
-  impersonal: { pron: "", obj: "", with: "", for: "", poss: "the" },
+  impersonal: { pron: "", obj: "", with: "", poss: "the" },
 };
 
 export function contextEn(state, n, scene) {
-  const i = { i: 0, we: 1, brand: 2 }[state.speaker];
+  const i = { i: 0, we: 1, byName: 2 }[state.speaker];
   const address = scene.individual && state.address === "youPlural" ? "you" : state.address;
   const register = state.address === "formal" || n.formality <= 2 ? "formal" : n.formality >= 4 ? "informal" : "neutral";
-  const name = state.brand.trim() || "Lumen";
+  const name = state.name.trim() || "Lumen";
   return {
     n, register, name,
     speaker: state.speaker,
-    isBrand: state.speaker === "brand",
+    named: state.speaker === "byName",
     A: ADDRESS[address],
     group: address === "youPlural",
     impersonal: address === "impersonal",
     v: (verb) => VERBS[verb][i],
     S: ["I ", "we ", `${name} `][i],
-    subj: ["I", "we", "the team"][i],
-    subjBe: ["I am", "we are", "the team is"][i],
+    subj: ["I", "we", name][i],
+    subjBe: ["I am", "we are", `${name} is`][i],
+    // the object form: "give me a shout", "give us a shout"
+    obj: ["me", "us", name][i],
   };
 }
 
@@ -56,7 +59,7 @@ export function greetingEn(c, readerName) {
   if (c.impersonal && !readerName) return null;
   let f = c.register === "formal" ? Math.min(c.n.formality, 2) : c.n.formality;
   if (c.grave) f = Math.min(f, 3);
-  if (f === 1) return readerName ? `Dear ${readerName},` : c.group ? "Dear customers," : "Dear customer,";
+  if (f === 1) return readerName ? `Dear ${readerName},` : c.group ? "Dear readers," : "Dear reader,";
   if (f === 2) return readerName ? `Hello ${readerName},` : c.group ? "Hello everyone," : "Hello,";
   if (f === 3) return readerName ? `Hi ${readerName},` : c.group ? "Hi everyone," : "Hi,";
   if (f === 4) return readerName ? `Hi ${readerName}, how are you?` : c.group ? "Hi everyone, how's it going?" : "Hi, how's it going?";
@@ -64,75 +67,76 @@ export function greetingEn(c, readerName) {
 }
 
 export const SCENES_EN = {
-  launch: {
-    emoji: "📊",
+  goodNews: {
+    emoji: "📬",
     formalSwaps: [
-      [/\bIt opens in one click\b/g, "It can be accessed with a single click"],
       [/\bis here\b/g, "is now available"],
+      [/\bIt arrives\b/g, "It is delivered"],
+      [/\bIt goes out\b/g, "It is sent"],
     ],
-    looseSwaps: [[/\btake a look\b/g, "check it out"]],
+    looseSwaps: [],
     compose(c) {
       const { n, v, S, subj, A } = c;
       const opening = [
-        [sentence(`${S}launched the monthly report today.`, true)],
-        [sentence(`${S}launched the monthly report today, to make closing the month easier.`, true)],
-        [sentence("The monthly report is here, and closing the month now fits on one screen.", true)],
-        [sentence("Every month tells a story."), sentence("Now it has a home: the new monthly report.", true)],
-        [sentence("Every month leaves traces: Monday's coffee, Friday's big sale, the bill that showed up unannounced."), sentence("Now those traces fit on a single page, in the new monthly report.", true)],
+        [sentence(`${S}launched the newsletter today.`, true)],
+        [sentence(`${S}launched the newsletter today, for anyone with no time to follow everything.`, true)],
+        [sentence("The newsletter is here, and the week now fits in five minutes of reading.", true)],
+        [sentence("Every week tells a story."), sentence("Now it has a home: the new newsletter.", true)],
+        [sentence("Every week leaves traces: Monday's idea, Wednesday's doubt, Friday's discovery."), sentence("Now those traces fit in a single email, in the new newsletter.", true)],
       ][n.style - 1];
 
       const body = [
-        "It opens in one click and shows where the month's money went.",
-        `It opens in one click and shows ${A.poss} monthly spending by category.`,
-        `It opens in one click, sorts ${A.poss} spending by category and compares it with last month.`,
-        "Data updates daily, split by category and compared with the last 12 months, with CSV export.",
-        "Data is consolidated daily at 3 am, grouped by cost center and benchmarked against a 12-month moving average; export via CSV or the API.",
+        "It arrives every Friday with the best of the week.",
+        `It arrives in ${A.poss} inbox every Friday with the week's best links.`,
+        "It arrives every Friday with the best links by topic, all kept in an archive on the site.",
+        "It goes out every Friday at 7 am, about 800 words, with three fixed sections, a searchable archive and RSS.",
+        "It sends weekly at 7 am, about 800 words, DKIM-signed, with full-text RSS and one-click unsubscribe.",
       ][n.technicality - 1];
 
       const benefit = [
-        `The idea is that it helps${A.obj} see the month more clearly, but ${c.subjBe} still fine-tuning details.`,
-        `It should help${A.obj} see the month more clearly.`,
-        `It helps${A.obj} see the month more clearly.`,
-        c.impersonal ? "The month becomes clear from start to finish." : "You will see the month clearly.",
-        c.impersonal ? "Closing the month in the dark is over." : "You will never close the month in the dark again.",
+        `The idea is that it helps${A.obj} follow the week with less noise, but ${c.subjBe} still fine-tuning the format.`,
+        `It should help${A.obj} follow the week with less noise.`,
+        `It helps${A.obj} follow the week with less noise.`,
+        c.impersonal ? "The week becomes clear in five minutes." : "You will follow the week without effort.",
+        c.impersonal ? "Missing what matters is over." : "You will never miss what matters again.",
       ][n.certainty - 1];
 
       const humor = {
-        3: [sentence("And the spreadsheet can finally rest.")],
-        4: [sentence("No spreadsheets, no hunting for lost receipts.")],
-        5: [sentence(c.impersonal ? "The 14-tab spreadsheet can retire now." : "You can retire the 14-tab spreadsheet."), sentence("It did its best.")],
+        3: [sentence("And those forty open tabs can finally rest.")],
+        4: [sentence("No forty open tabs, no hunting for the lost link.")],
+        5: [sentence(c.impersonal ? "The forty open tabs can retire now." : "You can close those forty open tabs."), sentence("They did their best.")],
       }[n.humor] || [];
 
       const attitude = {
-        1: [sentence(`${S}${v("appreciate")} ${c.impersonal ? "the" : "your"} trust.`)],
-        3: [sentence(`It turned out the way ${subj} wanted it: simple.`)],
-        4: [sentence("A beautiful report nobody opens is useless.")],
-        5: [sentence("A report that looks like a tax return?"), sentence("Not here.")],
+        1: [sentence(`${S}${v("appreciate")} ${c.impersonal ? "the" : "your"} interest.`)],
+        3: [sentence(`It turned out the way ${subj} wanted it: short.`)],
+        4: [sentence("A long newsletter nobody finishes is useless.")],
+        5: [sentence("A newsletter that reads like a press release?"), sentence("Not here.")],
       }[n.attitude] || [];
 
       const energy = n.energy === 5
-        ? [sentence(`${subj} can hardly wait to see what ${c.impersonal ? "shows up" : "you will discover"}.`, true)]
+        ? [sentence(`${subj} can hardly wait to hear what ${c.impersonal ? "readers think" : "you think"}.`, true)]
         : [];
 
       const role = {
-        mentor: `Over the next few weeks, ${S}will send tips on reading each chart.`,
+        mentor: `In the first issue, ${S}will explain how to get the most from each section.`,
         peer: c.speaker === "i"
-          ? "I use this report for my own month-end close, every month."
-          : c.isBrand
-            ? `The ${c.name} team uses this report for its own month-end close, every month.`
-            : "We use this report for our own month-end close, every month.",
-        expert: `${S}built the calculations from more than 2,000 small-business closes.`,
-        host: `${S}prepared a quick tour for ${A.poss} first visit.`,
+          ? "I write the newsletter I wanted to get."
+          : c.named
+            ? `${c.name} writes the newsletter that was missing.`
+            : "We write the newsletter we wanted to get.",
+        expert: `${S}built the selection from more than 200 sources read every week.`,
+        host: `${S}prepared a welcome issue for ${A.poss} first week.`,
         provocateur: c.impersonal
-          ? "A report that changes no decision is just decoration."
-          : "If your current report changes no decision, it is just decoration.",
+          ? "An inbox that teaches nothing is just noise."
+          : "If your inbox teaches you nothing, it is just noise.",
       }[c.role];
 
       const cta = c.impersonal
-        ? sentence("The report is already available on the dashboard.")
+        ? sentence("Subscriptions are already open on the site.")
         : c.register === "formal"
-          ? sentence("Visit the dashboard to see the new report.")
-          : sentence(`Open the ${c.register === "informal" ? "app" : "dashboard"} and take a look.`, true);
+          ? sentence("Please visit the site to subscribe.")
+          : sentence(`Open the ${c.register === "informal" ? "link" : "site"} and subscribe.`, true);
 
       return [
         [...opening, sentence(body), sentence(benefit, n.certainty === 5)],
@@ -143,65 +147,66 @@ export const SCENES_EN = {
     },
   },
 
-  outage: {
+  badNews: {
     emoji: "🛠️",
     grave: true,
     formalSwaps: [
-      [/\bwas down\b/g, "was unavailable"],
-      [/\bfelt it\b/g, "was affected"],
+      [/\bwent out twice\b/g, "was sent twice"],
+      [/\barrived twice\b/g, "was delivered twice"],
+      [/\bwould not open\b/g, "did not work"],
     ],
     looseSwaps: [],
     compose(c) {
       const { n, v, S, A } = c;
       const opening = [
-        "Yesterday, from 2:10 to 2:50 pm, the system was down.",
-        "Yesterday afternoon, the system was down for 40 minutes, and some scheduled payments were delayed.",
-        "Yesterday afternoon, for 40 minutes, the system stopped, and some scheduled payments were left waiting.",
-        "Yesterday, for 40 minutes, the system went silent, and anyone with a scheduled payment felt it.",
-        "For 40 minutes yesterday afternoon, everything stopped: screens loading, payments queued, people waiting along with them.",
+        "Yesterday at 7 am, this week's issue went out twice.",
+        "Yesterday morning, this week's issue went out twice, and the second copy had broken links.",
+        "Yesterday morning, the issue arrived twice, and the second copy brought links that would not open.",
+        "Yesterday, the newsletter spoke twice, and the second time its links led nowhere.",
+        "Yesterday morning, the same issue knocked twice: the second time with links that opened onto nothing, and people clicking without getting anywhere.",
       ][n.style - 1];
 
       const body = [
-        "Everything is working again, and no data was lost.",
-        `${S}fixed the problem, and no data was lost.`,
-        `The cause was a failure in the payment server; ${S}fixed it, and no data was lost.`,
-        `The cause was a database that stopped responding; ${S}switched to the backup copy, and the delayed payments have already been processed, with no data lost.`,
-        `The cause was connection exhaustion on the primary database after an update; ${S}activated the replica at 2:48 pm and reprocessed 1,312 payments by 4 pm, with no data lost.`,
+        "The right issue is on the site, with every link working.",
+        `${S}fixed the links, and the right issue is on the site.`,
+        `The cause was an error in the sending automation; ${S}fixed it, and the right issue is on the site.`,
+        `The cause was a template change that triggered the send twice; ${S}rolled back to the previous template, and the links in the issue on the site are fixed.`,
+        `The cause was a duplicated trigger in the automation after a template change; the second batch went out with links to the staging environment; ${S}disabled the trigger at 7:40 am and resent the correct version to 1,312 subscribers.`,
       ][n.technicality - 1];
 
       const apology = [
         `${S}sincerely ${v("apologize")} for the inconvenience.`,
-        `${S}${v("apologize")} for the delay.`,
-        `${S}${v("apologize")} for the delay.`,
-        "Sorry for the scare.",
-        c.speaker === "i" ? "My bad, truly." : "Our bad, truly.",
+        `${S}${v("apologize")} for the duplicate email.`,
+        `${S}${v("apologize")} for the duplicate email.`,
+        "Sorry for the double email.",
+        c.speaker === "i" ? "My bad, truly." : c.named ? "A real slip, truly." : "Our bad, truly.",
       ][n.attitude - 1];
 
       const certainty = [
         `${c.subjBe} still investigating, but the idea is to reduce the chance of this happening again.`,
-        `${c.subjBe} reinforcing the system, which should keep this from happening again.`,
-        `${S}added a new alert to catch this kind of failure earlier.`,
-        `${S}put a safeguard in place so this failure does not happen again.`,
-        `This failure will not come back: ${S}removed the root cause.`,
+        `${c.subjBe} reviewing the automation, which should keep this from happening again.`,
+        `${S}added a test before every send to catch this earlier.`,
+        `${S}put a review in place before every send so this does not happen again.`,
+        `This will not come back: ${S}removed the root cause.`,
       ][n.certainty - 1];
 
       const humor = {
-        4: [sentence(c.speaker === "i" ? "Not my finest day." : c.isBrand ? `Not ${c.name}'s finest day.` : "Not our finest day.")],
-        5: [sentence("The server took a nap nobody approved.")],
+        4: [sentence(c.speaker === "i" ? "Not my finest Friday." : c.named ? `Not ${c.name}'s finest Friday.` : "Not our finest Friday.")],
+        5: [sentence("The newsletter got so excited it said everything twice.")],
       }[n.humor] || [];
 
-      const energy = n.energy === 5 ? [sentence(`${c.subjBe} on it until every payment lands.`, true)] : [];
+      const energy = n.energy === 5 ? [sentence(`${c.subjBe} watching every send until the next issue goes out right.`, true)] : [];
 
       const role = {
-        mentor: `To check whether ${A.poss} payments went through, ${S}left a step-by-step guide in the help center.`,
+        mentor: `To find the right links, ${S}left the corrected issue at the top of the site.`,
         peer: c.speaker === "i"
-          ? "I felt it too: my own month-end close was delayed yesterday."
-          : c.isBrand
-            ? `The ${c.name} team felt it too: its own close was delayed yesterday.`
-            : "We felt it too: our own month-end close was delayed yesterday.",
-        expert: "The full technical report will be on the status page by Friday.",
-        host: `If any payment is still pending, ${S}will handle it first.`,
-        provocateur: "A system that never goes down does not exist. What exists is a company that warns fast and tells everything.",
+          ? "I felt it too: my own inbox got both copies."
+          : c.named
+            ? `${c.name} felt it too: both copies landed in ${c.name}'s own inbox.`
+            : "We felt it too: our own inbox got both copies.",
+        expert: "The full account of what happened will be on the site by Monday.",
+        host: `If any link still does not open, ${S}will fix it right away; just reply.`,
+        provocateur: "A newsletter that never slips does not exist. What exists is someone who warns fast and tells everything.",
       }[c.role];
 
       const cta = c.impersonal
@@ -221,12 +226,12 @@ export const SCENES_EN = {
     },
   },
 
-  question: {
+  reply: {
     emoji: "🙂",
     reader: "Marina",
     individual: true,
     formalSwaps: [
-      [/\bJust go to\b/g, "Please go to"],
+      [/\bJust open\b/g, "Please open"],
       [/\bjust reply\b/g, "simply reply"],
     ],
     looseSwaps: [],
@@ -237,62 +242,62 @@ export const SCENES_EN = {
 
       const opening = [
         [sentence(yes, true)],
-        [sentence(c.impersonal ? "Yes, the date can be changed." : "Yes, you can change it.", true)],
-        [sentence(c.impersonal ? "Yes, the date can be changed, and it takes less than a minute." : "Yes, you can change it, and it takes less than a minute.", true)],
-        [sentence(yes, true), sentence("A good due date is one that falls after the money comes in.")],
-        [sentence(yes, true), sentence("A good bill is one that arrives when the cash flow can breathe.")],
+        [sentence(c.impersonal ? "Yes, past issues can be read." : "Yes, you can read them.", true)],
+        [sentence(c.impersonal ? "Yes, past issues can be read, and they are all in one place." : "Yes, you can read them, and they are all in one place.", true)],
+        [sentence(yes, true), sentence("A good issue does not expire: it just waits for the right time to be read.")],
+        [sentence(yes, true), sentence("An old issue is a letter still looking for its reader.")],
       ][n.style - 1];
 
-      const pick = c.impersonal ? "it is possible to pick" : "pick";
+      const filter = c.impersonal ? "it is possible to filter" : "filter";
       const body = [
-        "Just go to Settings and pick the new date.",
-        "Just go to Settings > Billing and pick the new date.",
-        "Just go to Settings > Billing and pick the new date; the change applies from the next bill.",
-        `In Settings > Billing > Due date, ${pick} a day between 1 and 28; the change applies from the next cycle and can be made up to twice a year.`,
-        `In Settings > Billing > Due date, ${pick} a day from 1 to 28 (short months block 29 to 31); the change creates a prorated bill for the transition and is limited to twice a year from signup.`,
+        "Just open the site and click Archive.",
+        "Just open the site and go to Archive > Issues.",
+        "Just open the site and go to Archive > Issues; the list filters by topic.",
+        `In Archive > Issues, ${filter} by topic or month; there are 86 issues since 2023, each with a permanent link.`,
+        `In Archive > Issues, ${filter} by topic or month (issues from before 2023 are PDFs); each issue has a permanent link, and the RSS feed carries the full text of the last 20.`,
       ][n.technicality - 1];
 
       const certainty = [
-        `It usually shows up right away, but if it does not, ${S}will check it${A.with}.`,
-        `The option should show up right away; if it does not, ${S}will check it${A.with}.`,
-        "The change shows up right away on the dashboard.",
-        "The change shows up right away, no need to talk to anyone.",
-        "Done: the change shows up right away, no queue, no waiting.",
+        `It usually opens right away, but if it does not, ${S}will check it${A.with}.`,
+        `The archive should open right away; if it does not, ${S}will check it${A.with}.`,
+        "The archive opens right away, no sign-up.",
+        "The archive opens right away, no sign-up, no password.",
+        "Done: it all opens right away, no sign-up, no password, no waiting.",
       ][n.certainty - 1];
 
       const humor = {
-        4: [sentence("No forms in triplicate.")],
-        5: [sentence(`A bill does not have to be due on the day ${A.poss} paycheck is still on its way.`)],
+        4: [sentence("No emailing anyone to ask for an old issue.")],
+        5: [sentence("The old issues are not in a drawer: they are just waiting for visitors.")],
       }[n.humor] || [];
 
       const attitude = {
         1: [sentence(c.impersonal ? `${S}${v("appreciate")} the message.` : `${S}${v("thank")} you for reaching out.`)],
-        4: [sentence("Red tape here is only what the law requires.")],
-        5: [sentence(c.impersonal ? "If this was complicated somewhere else, the problem was the place." : "If this was complicated somewhere else, the problem was never you.")],
+        4: [sentence("Nothing here is locked behind a sign-up.")],
+        5: [sentence("An archive locked somewhere else?"), sentence(c.impersonal ? "The problem was the place." : "The problem was never you.")],
       }[n.attitude] || [];
 
       const role = {
         mentor: c.impersonal
-          ? "Tip: a date about three days after the money comes in works best."
-          : "Tip: pick a date about three days after the money comes in.",
+          ? "Tip: the starred issues are the most read and a good place to start."
+          : "Tip: start with the starred issues, the most read.",
         peer: c.speaker === "i"
-          ? "I use the 10th, after payments come in."
-          : c.isBrand
-            ? `At ${c.name}, the favorite is the 10th, after payments come in.`
-            : "Here on the team, we use the 10th, after payments come in.",
-        expert: `${S}${v("see")} it in the data: due dates set just after income arrives mean far fewer late payments.`,
+          ? "I reread the old ones when I run out of ideas."
+          : c.named
+            ? `${c.name} rereads the old ones when ideas run out.`
+            : "We reread the old ones when we run out of ideas.",
+        expert: `${S}${v("see")} it in the numbers: readers who start from the archive read four issues on average.`,
         host: c.impersonal
-          ? "The change can also be made on request; a reply with the date is enough."
-          : `If you prefer, ${S}can make the change${A.for}; just reply with the date.`,
+          ? "The five most read can also be sent on request; a reply is enough."
+          : `If you prefer, ${S}can send you the five most read; just reply.`,
         provocateur: c.impersonal
-          ? "Due dates that ignore cash flow are traps, not rules."
-          : "Due dates that ignore your cash flow are traps, not rules.",
+          ? "A newsletter without an archive is just inbox noise."
+          : "A newsletter without an archive is just noise in your inbox.",
       }[c.role];
 
       const cta = c.register === "formal"
         ? sentence(c.impersonal ? `${S}${v("remain")} available for anything else.` : `${S}${v("remain")} available if you need anything else.`)
         : c.register === "informal"
-          ? sentence(`Anything else, just give ${["me", "us", "the team"][["i", "we", "brand"].indexOf(c.speaker)]} a shout.`, true)
+          ? sentence(`Anything else, just give ${c.obj} a shout.`, true)
           : sentence(c.impersonal ? "For anything else, a reply to this message is enough." : "If you need anything else, just reply.");
 
       return [

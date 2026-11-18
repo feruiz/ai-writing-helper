@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Brand Voice Creator</title>
-  <meta name="description" content="Build your brand's voice the way you build a game character: every choice rewrites the sample text live and becomes a rule in the voice guide.">
+  <title>AI Writing Helper</title>
+  <meta name="description" content="Set up the voice you write in, yours, a project's or a brand's, the way you build a game character: every choice rewrites the sample text live and becomes a rule in a guide any AI can write with.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;1,7..72,400&display=swap" rel="stylesheet">
@@ -14,8 +14,8 @@
 <body>
   <header class="topbar">
     <div class="app-title">
-      <h1>Brand Voice Creator</h1>
-      <p>Build your brand's voice the way you build a game character. Every choice rewrites the text on the right and becomes a rule in the guide.</p>
+      <h1>AI Writing Helper</h1>
+      <p>Teach any AI to write in your voice, or in a project's or a brand's. Build it the way you build a game character: every choice rewrites the text on the right and becomes a rule in the guide.</p>
     </div>
     <div class="top-actions">
       <button type="button" class="button" id="randomize">Randomize voice</button>
@@ -35,8 +35,8 @@
         <h2>Identity</h2>
         <div class="field-row">
           <label class="field">
-            <span>Brand name</span>
-            <input type="text" id="brand" autocomplete="off" maxlength="40">
+            <span>Name <small>(yours, a project's or a brand's)</small></span>
+            <input type="text" id="name" autocomplete="off" maxlength="40">
           </label>
           <label class="field narrow">
             <span>Article in Portuguese</span>
@@ -54,42 +54,42 @@
       </section>
 
       <section class="panel">
-        <h2>The brand</h2>
+        <h2>About the writing</h2>
         <p class="note">What the sliders can't say. All optional and short: what you fill in goes near the top of the guide, and empty fields stay out.</p>
         <label class="field">
-          <span>What it does, and for whom</span>
-          <textarea id="business" rows="2" maxlength="300" placeholder="A neighborhood bakery that bakes sourdough daily and delivers within 3 km"></textarea>
+          <span>What it's about, and what it's for</span>
+          <textarea id="about" rows="2" maxlength="300" placeholder="My personal site and a weekly newsletter on design for small teams"></textarea>
         </label>
         <label class="field">
-          <span>Who reads its texts</span>
-          <input type="text" id="reader" autocomplete="off" maxlength="200" placeholder="Regulars and parents of the school next door, mostly on their phones">
+          <span>Who reads it</span>
+          <input type="text" id="reader" autocomplete="off" maxlength="200" placeholder="Designers and founders of small teams, mostly on their phones">
         </label>
         <label class="field">
           <span>What it believes <small>(up to 4, one per line)</small></span>
-          <textarea id="beliefs" rows="3" maxlength="500" placeholder="Good bread takes time&#10;Everyone who walks in is a neighbor"></textarea>
+          <textarea id="beliefs" rows="3" maxlength="500" placeholder="Good design is mostly cutting&#10;No jargon a newcomer can't follow"></textarea>
         </label>
         <label class="field">
           <span>How a text opens</span>
-          <input type="text" id="opening" autocomplete="off" maxlength="200" placeholder="With the news itself, never a greeting or a question">
+          <input type="text" id="opening" autocomplete="off" maxlength="200" placeholder="With the point itself, never a greeting or a question">
         </label>
         <label class="field">
           <span>How a text closes</span>
           <input type="text" id="closing" autocomplete="off" maxlength="200" placeholder="With one concrete next step and the first name of whoever signs">
         </label>
         <label class="field">
-          <span>We never… <small>(up to 6, one per line)</small></span>
-          <textarea id="never" rows="3" maxlength="600" placeholder="promise a delivery time we can't keep&#10;write in all caps"></textarea>
+          <span>Never… <small>(up to 6, one per line)</small></span>
+          <textarea id="never" rows="3" maxlength="600" placeholder="promise what can't be delivered&#10;write in all caps"></textarea>
         </label>
         <label class="field">
-          <span>We say X, not Y <small>(up to 8, one per line)</small></span>
-          <textarea id="pairs" rows="3" maxlength="400" placeholder="neighbors, not customers&#10;fresh out of the oven, not freshly baked"></textarea>
+          <span>Say X, not Y <small>(up to 8, one per line)</small></span>
+          <textarea id="pairs" rows="3" maxlength="400" placeholder="readers, not users&#10;team, not resources"></textarea>
           <small class="note" id="pairs-note"></small>
         </label>
       </section>
 
       <section class="panel">
         <h2>Situations</h2>
-        <p class="note">The voice stays and the tone shifts with the situation. Switch off the ones the brand doesn't write for, or add its own, with the shifts it needs. They show up in the tabs, in the tags of the examples, in the test and in the guide.</p>
+        <p class="note">The voice stays and the tone shifts with the situation. Switch off the ones you don't write in, or add your own, with the shifts they need. They show up in the tabs, in the tags of the examples and in the guide.</p>
         <div class="examples" id="situation-list"></div>
         <button type="button" class="button" id="add-situation">Add a situation</button>
       </section>
@@ -121,7 +121,7 @@
 
       <section class="panel">
         <h2>Approved examples <small id="examples-count"></small></h2>
-        <p class="note">Real texts the brand has approved. They become the guide's examples, which is what an AI imitates most. Tag each one with the situation it was written for.</p>
+        <p class="note">Real texts in this voice that you approve. They become the guide's examples, which is what an AI imitates most. Tag each one with the situation it was written for.</p>
         <div class="examples" id="examples"></div>
         <button type="button" class="button" id="add-example">Add a text</button>
       </section>
@@ -228,7 +228,7 @@
     <ol class="steps">
       <li>
         <h3>1. Start the conversation</h3>
-        <p class="note">Copy the request and paste it in a new conversation. The AI asks for real texts from the brand and a few questions, places the voice on the same ruler as the sliders, shows you the proposal, and ends with a block of settings.</p>
+        <p class="note">Copy the request and paste it in a new conversation. The AI asks whose voice it is, for real texts written in it and a few questions, places the voice on the same ruler as the sliders, shows you the proposal, and ends with a block of settings.</p>
         <div class="guide-bar">
           <span class="note">Talk in</span>
           <div class="tabs small" role="tablist" id="chat-languages" aria-label="Language of the conversation">
@@ -253,7 +253,7 @@
         <h3>2. Bring the result back</h3>
         <p class="note">Paste the AI's reply with the block of settings, or the whole conversation: the site finds the latest block in it. The voice changes here, and you can undo it.</p>
         <label class="field"><span>The AI's reply</span>
-          <textarea id="reply" rows="6" placeholder='The reply that ends with the block: { "brandVoiceCreator": 1, … }'></textarea>
+          <textarea id="reply" rows="6" placeholder='The reply that ends with the block: { "aiWritingHelper": 1, … }'></textarea>
         </label>
         <div class="dialog-actions">
           <button type="button" class="button primary" id="apply-reply">Apply to the voice</button>

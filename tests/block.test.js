@@ -18,11 +18,11 @@ const voiceOf = ({ situation, applyShift, examples, rejected, ...rest }) => ({
 
 const bakery = () => normalize({
   ...clone(INITIAL_STATE),
-  ...PRESETS.find((p) => p.id === "founder").state,
-  brand: "Padaria Flor",
+  ...PRESETS.find((p) => p.id === "columnist").state,
+  name: "Padaria Flor",
   article: "a",
   essence: "Fala como a vizinha que acorda cedo para assar.",
-  business: "Padaria de bairro que assa pão de fermentação natural todo dia",
+  about: "Padaria de bairro que assa pão de fermentação natural todo dia",
   reader: "Vizinhos e pais da escola ao lado",
   beliefs: "Pão bom leva tempo\nQuem entra é vizinho",
   opening: "Com a notícia, sem saudação",
@@ -31,7 +31,7 @@ const bakery = () => normalize({
   pairs: "vizinhos, not clientes",
   preferred: "fornada, massa mãe",
   customSituations: [{ id: "custom-abc", name: "Falta de pão", when: "acabou a fornada", shift: { energy: -1 } }],
-  hiddenSituations: ["outage"],
+  hiddenSituations: ["badNews"],
   examples: [{ text: "Saiu a fornada das 7.\nAinda quente.", situation: "custom-abc", lang: "pt", source: "pasted" }],
   rejected: [{ text: "Olá, querido cliente!", reason: "abre com saudação", situation: "general", lang: "pt", source: "ai" }],
 });
@@ -62,12 +62,12 @@ test("keys left out keep what the site has", () => {
   const voice = bakery();
   const r = readReply(fenced({ [MARKER]: 1, axes: { humor: 5 } }), voice);
   assert.equal(r.state.axes.humor, 5);
-  assert.equal(r.state.business, voice.business);
+  assert.equal(r.state.about, voice.about);
   assert.equal(r.state.examples.length, 1);
   assert.match(r.notes.join("\n"), /Not in the block, so kept as they were: Formality/);
 });
 
-test("the usual JSON slips are repaired", () => {
+test("the usual JSON slips are repaired (in a block from before the rename)", () => {
   const reply = `Pronto! Aqui está:
 
 \`\`\`json
@@ -84,14 +84,14 @@ Ainda quente.", "situation": "General", "language": "pt" },
 \`\`\``;
   const r = readReply(reply, initial());
   assert.ok(!r.error, r.error);
-  assert.equal(r.state.brand, "Padaria Flor");
+  assert.equal(r.state.name, "Padaria Flor");
   assert.equal(r.state.axes.formality, 4);
   assert.equal(r.state.examples[0].text, "Saiu a fornada.\nAinda quente.");
 });
 
 test("curly quotes are read as straight ones", () => {
-  const r = readReply("{ “brandVoiceCreator”: 1, “brand”: “Flor” }", initial());
-  assert.equal(r.state.brand, "Flor");
+  const r = readReply("{ “aiWritingHelper”: 1, “name”: “Flor” }", initial());
+  assert.equal(r.state.name, "Flor");
 });
 
 test("labels, levels in words and loose shapes are understood", () => {
@@ -145,7 +145,7 @@ test("what doesn't fit is left out, with a note for each", () => {
     article: "os",
     never: ["a", "b", "c", "d", "e", "f", "g"],
     pairs: ["vizinhos instead of clientes"],
-    hiddenSituations: ["launch", "birthday"],
+    hiddenSituations: ["goodNews", "birthday"],
     customSituations: [{ name: "Reclamação", shift: { humor: -5, mood: 1 } }, { when: "no name" }],
   }), before);
   const s = r.state;
@@ -154,18 +154,18 @@ test("what doesn't fit is left out, with a note for each", () => {
   assert.equal(s.axes.humor, 5);
   assert.equal(s.axes.energy, before.axes.energy);
   assert.equal(s.article, before.article);
-  assert.deepEqual(s.hiddenSituations, ["launch"]);
+  assert.deepEqual(s.hiddenSituations, ["goodNews"]);
   assert.equal(s.customSituations.length, 1);
   assert.deepEqual(s.customSituations[0].shift, { humor: -2 });
   for (const expected of [
     /Left out "tone"/,
-    /Who speaks: "they" isn't one of "we", "i", "brand"; kept "we"/,
+    /Who speaks: "they" isn't one of "i", "we", "byName"; kept "we"/,
     /Humor: 9 is outside 1 to 5; set to 5/,
     /Left out the axis "warmth"/,
     /Energy: "high" isn't a level/,
     /Article in Portuguese: "os"/,
-    /We never…: 7 lines; the guide takes the first 6/,
-    /We say X, not Y: 1 line not written as "word to use, not word to avoid"/,
+    /Never…: 7 lines; the guide takes the first 6/,
+    /Say X, not Y: 1 line not written as "word to use, not word to avoid"/,
     /"birthday" isn't a built-in situation/,
     /Reclamação: the Humor shift -5 became -2/,
     /Reclamação: left out the shift "mood: 1"/,
@@ -174,23 +174,23 @@ test("what doesn't fit is left out, with a note for each", () => {
 });
 
 test("long fields are cut to their limits, lists at whole lines", () => {
-  const r = readReply(fenced({ [MARKER]: 1, business: "x".repeat(400), never: Array.from({ length: 6 }, () => "y".repeat(150)) }), initial());
-  assert.equal(r.state.business.length, 300);
+  const r = readReply(fenced({ [MARKER]: 1, about: "x".repeat(400), never: Array.from({ length: 6 }, () => "y".repeat(150)) }), initial());
+  assert.equal(r.state.about.length, 300);
   assert.equal(r.state.never.split("\n").length, 3);
   assert.match(r.notes.join("\n"), /cut to 300 characters/);
   assert.match(r.notes.join("\n"), /left out the last 3 lines/);
 });
 
 test("switching every situation off keeps the built-in ones on", () => {
-  const r = readReply(fenced({ [MARKER]: 1, hiddenSituations: ["launch", "outage", "question"] }), initial());
+  const r = readReply(fenced({ [MARKER]: 1, hiddenSituations: ["goodNews", "badNews", "reply"] }), initial());
   assert.deepEqual(r.state.hiddenSituations, []);
   assert.match(r.notes.join("\n"), /Every situation was switched off/);
 });
 
 test("in a pasted conversation, the last block wins", () => {
-  const start = voiceBlock({ ...initial(), brand: "Old name" });
-  const conversation = `${fenced(start, "Starting point:", "")}\n\nAI: ok.\n\n${fenced({ [MARKER]: 1, brand: "New name" })}`;
-  assert.equal(readReply(conversation, initial()).state.brand, "New name");
+  const start = voiceBlock({ ...initial(), name: "Old name" });
+  const conversation = `${fenced(start, "Starting point:", "")}\n\nAI: ok.\n\n${fenced({ [MARKER]: 1, name: "New name" })}`;
+  assert.equal(readReply(conversation, initial()).state.name, "New name");
 });
 
 test("without the marker, an object that looks like a voice still counts", () => {
@@ -201,7 +201,7 @@ test("without the marker, an object that looks like a voice still counts", () =>
 test("a settings file downloaded from the site reads too", () => {
   const file = JSON.stringify({ ...bakery(), examples: [{ text: "Velho texto", situation: "general", lang: "pt", source: "claude" }] });
   const r = readReply(file, initial());
-  assert.equal(r.state.brand, "Padaria Flor");
+  assert.equal(r.state.name, "Padaria Flor");
   assert.equal(r.state.never, "promete horário de entrega\nescreve em caixa alta");
   assert.deepEqual(r.notes, []);
 });
@@ -215,27 +215,27 @@ test("texts saved when the site called Claude become texts from any AI", () => {
 test("each failure says what to do next", () => {
   assert.match(findBlock("").error, /Paste the AI's reply first/);
   assert.match(findBlock("Sure, here are some thoughts about your voice.").error, /No block of settings/);
-  assert.match(findBlock('```json\n{ "brandVoiceCreator": 1, "brand": "Flor", "axes": { "humor": 2').error, /cut off/);
-  assert.match(findBlock('{ "brandVoiceCreator": 1, brand: Flor }').error, /can't be read as JSON/);
+  assert.match(findBlock('```json\n{ "aiWritingHelper": 1, "name": "Flor", "axes": { "humor": 2').error, /cut off/);
+  assert.match(findBlock('{ "aiWritingHelper": 1, name: Flor }').error, /can't be read as JSON/);
 });
 
 test("the list of changes names what moved", () => {
   const before = initial();
   const after = readReply(fenced({
     [MARKER]: 1,
-    brand: "Flor",
-    speaker: "brand",
+    name: "Flor",
+    speaker: "byName",
     axes: { humor: 1 },
     never: ["grita"],
-    hiddenSituations: ["outage"],
+    hiddenSituations: ["badNews"],
     customSituations: [{ name: "Falta de pão", when: "acabou", shift: {} }],
     examples: ["Saiu a fornada."],
   }), before).state;
   const changes = Object.fromEntries(changesBetween(before, after).map((c) => [c.id, c.change]));
-  assert.equal(changes.brand, "“Flor”");
-  assert.equal(changes.speaker, "We → The brand");
+  assert.equal(changes.name, "“Flor”");
+  assert.equal(changes.speaker, "We → By name");
   assert.equal(changes.humor, "3 → 1 of 5 (Serious)");
   assert.equal(changes.never, "1 added");
-  assert.equal(changes.situations, "switched off Service outage; added Falta de pão");
+  assert.equal(changes.situations, "switched off Bad news; added Falta de pão");
   assert.equal(changes.examples, "1 text added");
 });
