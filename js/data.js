@@ -154,11 +154,22 @@ export const FINISH = {
   },
 };
 
-// Situations: the voice stays, the tone shifts. The shift is added to the base temperament.
+// Situations: the voice stays, the tone shifts. The shift is added to the base
+// temperament. "summary" is the fictional case the sample text is about;
+// "when" tells the guide's reader which real cases the situation covers.
 export const SITUATIONS = [
-  { id: "launch", name: "Launch", summary: "Announcing the new monthly report", shift: { energy: +1 } },
-  { id: "outage", name: "Service outage", summary: "The system was down for 40 minutes and payments were delayed", shift: { humor: -2, energy: -2, attitude: -1, style: -1 } },
-  { id: "question", name: "Customer question", summary: "A customer asks whether the bill's due date can be changed", shift: {} },
+  { id: "launch", name: "Launch", summary: "Announcing the new monthly report", when: "announcing something new", shift: { energy: +1 } },
+  { id: "outage", name: "Service outage", summary: "The system was down for 40 minutes and payments were delayed", when: "something failed on the brand's side and the reader was affected", shift: { humor: -2, energy: -2, attitude: -1, style: -1 } },
+  { id: "question", name: "Customer question", summary: "A customer asks whether the bill's due date can be changed", when: "a reply to one person who asked something", shift: {} },
+];
+
+// Every situation the brand knows: the built-in ones plus its own (see brand.js).
+// The active ones are what the pickers, the tabs and the guide offer: built-ins
+// the user hid, and own situations without a name yet, are left out.
+export const allSituations = (state) => [...SITUATIONS, ...(state.customSituations || [])];
+export const activeSituations = (state) => [
+  ...SITUATIONS.filter((s) => !state.hiddenSituations?.includes(s.id)),
+  ...(state.customSituations || []).filter((s) => s.name.trim()),
 ];
 
 const base = { formality: 3, humor: 3, attitude: 3, energy: 3, style: 3, technicality: 3, certainty: 3 };
@@ -196,6 +207,17 @@ export const INITIAL_STATE = {
   brand: "Lumen",
   article: "a",
   essence: "",
+  // where the voice lives, beyond the sliders (see brand.js): short text, or one item per line
+  business: "",
+  reader: "",
+  beliefs: "",
+  opening: "",
+  closing: "",
+  never: "",
+  pairs: "",
+  // the brand's own situations: { id, name, when, shift }, and the ids of built-ins it doesn't use
+  customSituations: [],
+  hiddenSituations: [],
   speaker: "we",
   address: "you",
   role: "mentor",
@@ -208,4 +230,8 @@ export const INITIAL_STATE = {
   forbidden: "delve, tapestry, testament, pivotal, seamless, game-changer, solução, inovador, no mundo atual, vale ressaltar, mergulhar, jornada",
   situation: "launch",
   applyShift: true,
+  // the brand's approved texts (see examples.js); left out of the shareable link
+  examples: [],
+  // texts the user turned down, each with the reason: { text, reason, situation, lang, source }
+  rejected: [],
 };

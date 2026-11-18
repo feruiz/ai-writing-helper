@@ -91,6 +91,8 @@ small { font-weight: 400; color: var(--muted); }
 .button:hover { border-color: var(--accent); }
 .button.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
 .button[disabled] { opacity: 0.55; cursor: progress; }
+.button.small { font-size: 0.82rem; padding: 0.3rem 0.7rem; }
+#approve-claude[disabled] { cursor: default; }
 .button.file { position: relative; overflow: hidden; }
 .button.file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 
@@ -130,6 +132,23 @@ small { font-weight: 400; color: var(--muted); }
 .field textarea { resize: vertical; }
 .field-row { display: grid; grid-template-columns: 1fr auto; gap: 0.6rem; }
 .check { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.6rem; font-size: 0.87rem; }
+.situation-field.inline { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.35rem; }
+.situation-field.inline select, .situation-field.inline input { width: auto; }
+
+/* Approved examples */
+.examples { display: grid; gap: 0.6rem; margin: 0.4rem 0 0.8rem; }
+.example { border: 1px solid var(--line); border-radius: 10px; padding: 0.1rem 0.7rem 0.7rem; }
+.example-meta { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.6rem; align-items: start; }
+.situation-builtins { margin-bottom: 0.6rem; }
+.situation-builtins .check small { display: block; font-weight: 400; color: var(--muted, inherit); }
+.example-meta.even { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.example details { margin-top: 0.6rem; font-size: 0.87rem; }
+.example summary { cursor: pointer; font-weight: 600; }
+.shift-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 0 0.6rem; }
+.example-foot { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-top: 0.6rem; }
+.example-foot .note { margin: 0; }
+.reject-form { margin-top: 0.8rem; }
+.reject-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
 
 /* Segmented choices */
 .choice { border: 0; padding: 0; margin: 0.75rem 0 0; min-width: 0; }
@@ -217,10 +236,11 @@ small { font-weight: 400; color: var(--muted); }
   70% { background-size: 100% 0.55em; }
   100% { background-size: 100% 0em; }
 }
-.sample .forbidden { text-decoration: underline wavy var(--alert); text-underline-offset: 4px; }
+.sample .forbidden, .test-sample .forbidden { text-decoration: underline wavy var(--alert); text-underline-offset: 4px; }
 .sample .empty { color: var(--muted); font-style: italic; }
 .sample-footer { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; justify-content: space-between; margin-top: 1rem; border-top: 1px solid var(--line); padding-top: 0.9rem; }
 .sample-footer .note { margin: 0; }
+.footer-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
 .lower-panels { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 0.9rem; }
 .meter, .portrait, .ladder {
@@ -268,9 +288,58 @@ small { font-weight: 400; color: var(--muted); }
 #guide { font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 0.82rem; resize: vertical; }
 .dialog-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 0.8rem; }
 .dialog-actions .note { margin: 0; }
+.guide-bar { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin-bottom: 0.6rem; }
+.guide-bar .note { margin: 0; }
 .samples { display: grid; gap: 0.5rem; }
 #diagnosis-result ul { padding-left: 1.1rem; font-size: 0.9rem; }
 #diagnosis-result p { font-size: 0.9rem; }
+#diagnosis-result #undo-diagnosis { margin-top: 0.8rem; }
+/* the habits found, each with its excerpt as evidence */
+.habits-title { margin-top: 1.2rem; }
+#diagnosis-result .habits { list-style: none; padding: 0; margin: 0.4rem 0 0.6rem; display: grid; gap: 0.4rem; }
+#diagnosis-result .habits .check { margin: 0; align-items: start; }
+#diagnosis-result .habits input { margin-top: 0.2rem; flex: none; }
+#diagnosis-result .habits q { font-family: var(--font-reading); color: var(--muted); }
+#diagnosis-result .habits small { white-space: nowrap; }
+
+/* Guide test */
+#test-status:empty { display: none; }
+#test-result { font-size: 0.9rem; }
+#test-result .detail { color: var(--muted); font-size: 0.84rem; }
+#test-result .sign { font-weight: 800; }
+.test-score { font-size: 1.15rem; margin: 1rem 0 0.4rem; }
+.test-score span { font-size: 0.9rem; color: var(--muted); }
+.table-scroll { overflow-x: auto; margin: 0.8rem 0; }
+.test-table { width: 100%; border-collapse: collapse; }
+.test-table th, .test-table td { text-align: left; vertical-align: top; padding: 0.45rem 0.5rem; border-bottom: 1px solid var(--line); }
+.test-table thead th { font-size: 0.82rem; color: var(--muted); font-weight: 600; }
+.test-table tbody th { white-space: nowrap; font-weight: 600; }
+.test-table td:nth-child(2), .test-table td:nth-child(3) { min-width: 4.5rem; }
+.test-table .exact .sign { color: var(--ok); }
+.test-table .close .sign { color: var(--muted); }
+.test-table .missed .sign { color: var(--alert); }
+.test-table .missed { background: color-mix(in srgb, var(--alert) 8%, transparent); }
+.test-heading { margin: 1.2rem 0 0.2rem; }
+.test-text { border: 1px solid var(--line); border-radius: 10px; padding: 0.2rem 0.9rem 0.9rem; margin-top: 0.7rem; }
+.test-brief { color: var(--muted); }
+.test-brief b { color: var(--ink); }
+.test-sample { font-family: var(--font-reading); font-size: 1rem; line-height: 1.6; }
+.test-sample p { margin: 0 0 0.8em; }
+.test-meter { list-style: none; margin: 0 0 0.7rem; padding: 0; display: grid; gap: 0.3rem; }
+.test-meter li { display: grid; grid-template-columns: 1.2rem 1fr; gap: 0.4rem; align-items: baseline; }
+.test-meter .sign { color: var(--alert); }
+.test-pass { margin: 0 0 0.7rem; }
+.test-pass .sign { color: var(--ok); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+@media (max-width: 600px) {
+  /* the reason drops under its row instead of pushing the table sideways */
+  .test-table tr { display: grid; grid-template-columns: minmax(0, 1fr) 4.5rem 6.5rem; border-bottom: 1px solid var(--line); }
+  .test-table th, .test-table td { border-bottom: 0; }
+  .test-table thead th:last-child { display: none; }
+  .test-table td:last-child { grid-column: 1 / -1; padding-top: 0; }
+  .test-table td:nth-child(2), .test-table td:nth-child(3) { min-width: 0; }
+}
 
 @media (max-width: 900px) {
   .layout { grid-template-columns: 1fr; }

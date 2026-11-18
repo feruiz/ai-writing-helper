@@ -20,6 +20,7 @@
     <div class="top-actions">
       <button type="button" class="button" id="randomize">Randomize voice</button>
       <button type="button" class="button" id="open-diagnosis">Diagnose my texts</button>
+      <button type="button" class="button" id="open-test">Test the guide</button>
       <button type="button" class="button primary" id="open-export">Export guide</button>
     </div>
   </header>
@@ -54,6 +55,47 @@
       </section>
 
       <section class="panel">
+        <h2>The brand</h2>
+        <p class="note">What the sliders can't say. All optional and short: what you fill in goes near the top of the guide, and empty fields stay out.</p>
+        <label class="field">
+          <span>What it does, and for whom</span>
+          <textarea id="business" rows="2" maxlength="300" placeholder="A neighborhood bakery that bakes sourdough daily and delivers within 3 km"></textarea>
+        </label>
+        <label class="field">
+          <span>Who reads its texts</span>
+          <input type="text" id="reader" autocomplete="off" maxlength="200" placeholder="Regulars and parents of the school next door, mostly on their phones">
+        </label>
+        <label class="field">
+          <span>What it believes <small>(up to 4, one per line)</small></span>
+          <textarea id="beliefs" rows="3" maxlength="500" placeholder="Good bread takes time&#10;Everyone who walks in is a neighbor"></textarea>
+        </label>
+        <label class="field">
+          <span>How a text opens</span>
+          <input type="text" id="opening" autocomplete="off" maxlength="200" placeholder="With the news itself, never a greeting or a question">
+        </label>
+        <label class="field">
+          <span>How a text closes</span>
+          <input type="text" id="closing" autocomplete="off" maxlength="200" placeholder="With one concrete next step and the first name of whoever signs">
+        </label>
+        <label class="field">
+          <span>We never… <small>(up to 6, one per line)</small></span>
+          <textarea id="never" rows="3" maxlength="600" placeholder="promise a delivery time we can't keep&#10;write in all caps"></textarea>
+        </label>
+        <label class="field">
+          <span>We say X, not Y <small>(up to 8, one per line)</small></span>
+          <textarea id="pairs" rows="3" maxlength="400" placeholder="neighbors, not customers&#10;fresh out of the oven, not freshly baked"></textarea>
+          <small class="note" id="pairs-note"></small>
+        </label>
+      </section>
+
+      <section class="panel">
+        <h2>Situations</h2>
+        <p class="note">The voice stays and the tone shifts with the situation. Switch off the ones the brand doesn't write for, or add its own, with the shifts it needs. They show up in the tabs, in the tags of the examples, in the test and in the guide.</p>
+        <div class="examples" id="situation-list"></div>
+        <button type="button" class="button" id="add-situation">Add a situation</button>
+      </section>
+
+      <section class="panel">
         <h2>Foundation</h2>
         <p class="note">Who speaks, who it talks to and in what role. Like race and class: it shapes everything else.</p>
         <div id="foundation"></div>
@@ -76,6 +118,19 @@
           <span>Forbidden words</span>
           <input type="text" id="forbidden" autocomplete="off">
         </label>
+      </section>
+
+      <section class="panel">
+        <h2>Approved examples <small id="examples-count"></small></h2>
+        <p class="note">Real texts the brand has approved. They become the guide's examples, which is what an AI imitates most. Tag each one with the situation it was written for.</p>
+        <div class="examples" id="examples"></div>
+        <button type="button" class="button" id="add-example">Add a text</button>
+      </section>
+
+      <section class="panel">
+        <h2>Rejected texts <small id="rejected-count"></small></h2>
+        <p class="note">Texts you turned down, each with the reason. The guide shows the latest few under "Not like this" so the model avoids the pattern the reason names, not the subject. A text without a reason stays out of the guide.</p>
+        <div class="examples" id="rejected"></div>
       </section>
 
       <section class="panel">
@@ -111,8 +166,18 @@
         <div class="sample" id="sample" aria-live="polite"></div>
         <div class="sample-footer">
           <span id="claude-status" class="note"></span>
-          <button type="button" class="button" id="write-with-claude">Write with Claude</button>
+          <div class="footer-actions">
+            <button type="button" class="button" id="approve-claude" hidden>Approve as example</button>
+            <button type="button" class="button" id="reject-claude" hidden>Reject</button>
+            <button type="button" class="button" id="write-with-claude">Write with Claude</button>
+          </div>
         </div>
+        <form class="reject-form" id="reject-form" hidden>
+          <label class="field"><span>Why not? A short reason, naming what is wrong with the way it's written</span>
+            <input type="text" id="reject-reason" maxlength="200" autocomplete="off" placeholder="For example: opens with a greeting and a question">
+          </label>
+          <div class="reject-actions"><button type="submit" class="button small">Reject this text</button><button type="button" class="button small" id="reject-cancel">Cancel</button></div>
+        </form>
       </div>
 
       <div class="lower-panels">
@@ -140,11 +205,20 @@
       <h2 id="export-title">Voice guide</h2>
       <button class="button">Close</button>
     </form>
-    <p class="note">Paste this text as a system prompt (in Claude, under Projects or Styles). Review the examples before you use it.</p>
+    <p class="note" id="export-note"></p>
+    <div class="guide-bar">
+      <span class="note">The guide tells the model to write in</span>
+      <div class="tabs small" role="tablist" id="guide-languages" aria-label="Guide language">
+        <button type="button" role="tab" data-guide-lang="en">English</button>
+        <button type="button" role="tab" data-guide-lang="pt">Português</button>
+      </div>
+    </div>
     <textarea id="guide" readonly rows="18" aria-label="Voice guide in Markdown"></textarea>
     <div class="dialog-actions">
       <button type="button" class="button primary" id="copy-guide">Copy guide</button>
       <button type="button" class="button" id="download-guide">Download .md</button>
+      <button type="button" class="button" id="download-checker" title="A script the model runs on its own draft: node check-voice.mjs draft.txt">Download checker</button>
+      <button type="button" class="button" id="download-skill" title="A folder with SKILL.md (the guide) and the checker, for agents that support skills">Download skill (.zip)</button>
       <button type="button" class="button" id="download-config">Download settings</button>
       <label class="button file">Load settings<input type="file" id="load-config" accept="application/json,.json"></label>
       <button type="button" class="button" id="copy-link">Copy link to this voice</button>
@@ -157,17 +231,65 @@
       <h2 id="diagnosis-title">Diagnose my texts</h2>
       <button class="button">Close</button>
     </form>
-    <p class="note">Paste one to three real, approved texts from the brand, in English or Portuguese, ideally of different kinds (a post, an email, a reply). Claude places the sliders and you adjust whatever doesn't feel right. Requires the API key.</p>
+    <p class="note">Paste one to three real, approved texts from the brand, in English or Portuguese, ideally of different kinds (a post, an email, a reply). Claude places the sliders, and lists the habits it can point to in the texts (how they open and close, the words they reach for, what they never do), each with an excerpt as evidence; you tick the ones to add to the brand fields. Requires the API key.</p>
     <div class="samples">
-      <textarea id="sample-1" rows="5" placeholder="Text 1" aria-label="Text 1"></textarea>
-      <textarea id="sample-2" rows="5" placeholder="Text 2" aria-label="Text 2"></textarea>
-      <textarea id="sample-3" rows="5" placeholder="Text 3" aria-label="Text 3"></textarea>
+      <div id="sample-box-1">
+        <textarea id="sample-1" rows="5" placeholder="Text 1" aria-label="Text 1"></textarea>
+        <div class="field situation-field inline" data-picker><span>Situation</span></div>
+      </div>
+      <div id="sample-box-2">
+        <textarea id="sample-2" rows="5" placeholder="Text 2" aria-label="Text 2"></textarea>
+        <div class="field situation-field inline" data-picker><span>Situation</span></div>
+      </div>
+      <div id="sample-box-3">
+        <textarea id="sample-3" rows="5" placeholder="Text 3" aria-label="Text 3"></textarea>
+        <div class="field situation-field inline" data-picker><span>Situation</span></div>
+      </div>
     </div>
+    <label class="check">
+      <input type="checkbox" id="keep-samples" checked>
+      <span>Keep these texts as approved examples for the guide</span>
+    </label>
     <div class="dialog-actions">
       <button type="button" class="button primary" id="diagnose">Diagnose</button>
       <span class="note" id="diagnosis-status" role="status"></span>
     </div>
     <div id="diagnosis-result"></div>
+  </dialog>
+
+  <dialog id="test" class="dialog" aria-labelledby="test-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="test-title">Test the guide</h2>
+      <button class="button">Close</button>
+    </form>
+    <p class="note">Write one to three short requests for texts the brand would really need, about its own business and unlike the approved examples. Claude writes each one with the guide as its only instructions. A second call then reads the texts blind, without the guide or your settings, and places the sliders. The closer that reading lands to your settings, the better the guide carries the voice. Requires the API key.</p>
+    <div class="guide-bar">
+      <span class="note">Write the texts in</span>
+      <div class="tabs small" role="tablist" id="test-languages" aria-label="Test language">
+        <button type="button" role="tab" data-test-lang="en">English</button>
+        <button type="button" role="tab" data-test-lang="pt">Português</button>
+      </div>
+    </div>
+    <div class="samples">
+      <div id="brief-box-1">
+        <textarea id="brief-1" rows="2" maxlength="400" placeholder="Request 1. For example: a post announcing something new the brand now offers" aria-label="Request 1"></textarea>
+        <div class="field situation-field inline" data-picker><span>Situation</span></div>
+      </div>
+      <div id="brief-box-2">
+        <textarea id="brief-2" rows="2" maxlength="400" placeholder="Request 2. For example: an email telling customers about a change they won't like" aria-label="Request 2"></textarea>
+        <div class="field situation-field inline" data-picker><span>Situation</span></div>
+      </div>
+      <div id="brief-box-3">
+        <textarea id="brief-3" rows="2" maxlength="400" placeholder="Request 3. For example: a reply to a customer whose order arrived late" aria-label="Request 3"></textarea>
+        <div class="field situation-field inline" data-picker><span>Situation</span></div>
+      </div>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="button primary" id="run-test">Run the test</button>
+      <span class="note" id="test-cost"></span>
+    </div>
+    <p class="note" id="test-status" role="status"></p>
+    <div id="test-result"></div>
   </dialog>
 
   <script type="module" src="js/app.js"></script>
